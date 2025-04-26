@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ruta Segura</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="panel">
+    <h2>Ruta Segura</h2>
+    <p>Haz clic en el mapa para seleccionar el origen y luego el destino.</p>
+    <div id="danger">Nivel de peligrosidad: --</div>
+    <button id="resetBtn">Reiniciar</button>
+</div>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

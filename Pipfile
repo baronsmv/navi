@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+django-environ = "*"
+osmnx = "*"
+networkx = "*"
+folium = "*"
+joblib = "*"
+scikit-fuzzy = "*"
+scipy = "*"
+psycopg = "*"
+PyYAML = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-django = "*"
+
+[requires]
+python_version = "3.11"
