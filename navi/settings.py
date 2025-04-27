@@ -15,6 +15,11 @@ from pathlib import Path
 
 import environ
 
+from utils.logging_config import setup_logging
+
+# Configuración del logging
+setup_logging()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

@@ -6,14 +6,17 @@ name = "pypi"
 [packages]
 django = "*"
 django-environ = "*"
+geopy = "*"
 osmnx = "*"
 networkx = "*"
 folium = "*"
 joblib = "*"
 scikit-fuzzy = "*"
+scikit-learn = "*"
 scipy = "*"
 psycopg = "*"
 PyYAML = "*"
+rtree = "*"
 
 [dev-packages]
 pytest = "*"

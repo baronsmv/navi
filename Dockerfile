@@ -10,6 +10,7 @@ RUN apt-get update && \
     build-essential \
     libpq-dev \
     postgis \
+    libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar pipenv

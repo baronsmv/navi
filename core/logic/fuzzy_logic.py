@@ -1,16 +1,8 @@
-import datetime
-from functools import lru_cache
-from typing import Dict, Tuple, List
+# core.logic.fuzzy_logic.py
 
-import networkx as nx
 import numpy as np
 import skfuzzy as fuzz
 import skfuzzy.control as ctrl
-from joblib import Parallel, delayed
-
-from core.logic.config_loader import config
-from core.logic.map_data import get_point_from_node
-from core.models import Incidente
 
 
 def create_fuzzy_variable(
@@ -33,8 +25,11 @@ def create_fuzzy_variable(
         if is_consequent
         else ctrl.Antecedent(universe, name)
     )
+
+    # Aplicación de funciones de membresía
     for label, values in membership.items():
         variable[label] = fuzz.trimf(variable.universe, values)
+
     return variable
 
 
@@ -93,7 +88,6 @@ def build_fuzzy_system() -> ctrl.ControlSystem:
 fuzzy_system = build_fuzzy_system()
 
 
-@lru_cache(maxsize=None)
 def calculate_fuzzy_danger(num_incidents: int, avg_gravity: float) -> float:
     """
     Evalúa el nivel de peligro de una ruta usando lógica difusa.
@@ -105,7 +99,6 @@ def calculate_fuzzy_danger(num_incidents: int, avg_gravity: float) -> float:
     Returns:
         float: Índice difuso de peligrosidad entre 0 y 1.
     """
-
     if num_incidents <= 0 and avg_gravity <= 0:
         return 0.0
 
@@ -128,61 +121,3 @@ def calculate_fuzzy_danger(num_incidents: int, avg_gravity: float) -> float:
     simulator.compute()
 
     return round(simulator.output["danger"], 2)
-
-
-def time_decay(days_since_incident: int, months: int = 6) -> float:
-    """
-    Calcula el impacto de un incidente según su antigüedad, usando una función de decaimiento exponencial.
-
-    Args:
-        days_since_incident (int): Días transcurridos desde el incidente.
-        months (int): Meses para considerar el decaimiento.
-
-    Returns:
-        float: Factor de peso entre 0 y 1 (incidentes recientes tienen mayor impacto).
-    """
-    return np.exp(-days_since_incident / (months * 30))
-
-
-def get_weighted_risk(point: Tuple[float, float]) -> float:
-    """
-    Calcula el riesgo ponderado de un punto geográfico basado en incidentes recientes.
-
-    Args:
-        point (Tuple[float, float]): Coordenadas geográficas (lat, lon).
-
-    Returns:
-        float: Índice de peligrosidad ajustado por tiempo.
-    """
-    vigencia = datetime.datetime.now() - datetime.timedelta(days=180)  # Últimos 6 meses
-    incidents: List[Incidente] = Incidente.objects.filter(
-        location__dwithin=(point, config["risk_calculation"]["radius"]),
-        fecha_incidente__gte=vigencia,
-    ).order_by("fecha_incidente")
-
-    weighted_gravity: float = sum(
-        inc.gravedad * time_decay((datetime.datetime.now() - inc.fecha_incidente).days)
-        for inc in incidents
-    )
-    avg_gravity: float = weighted_gravity / len(incidents) if incidents else 0
-
-    return calculate_fuzzy_danger(len(incidents), avg_gravity)
-
-
-def precalculate_node_risks_parallel(graph_latlon: nx.Graph) -> Dict[int, float]:
-    """
-    Calcula en paralelo el riesgo difuso de cada nodo en el grafo.
-
-    Args:
-        graph_latlon (nx.Graph): Grafo georreferenciado en lat/lon.
-
-    Returns:
-        Dict[int, float]: Mapeo nodo → nivel de riesgo.
-    """
-
-    def calc(node: int) -> Tuple[int, float]:
-        point = get_point_from_node(graph_latlon, node)
-        return node, get_weighted_risk(point)
-
-    results = Parallel(n_jobs=-1)(delayed(calc)(node) for node in graph_latlon.nodes())
-    return dict(results)
