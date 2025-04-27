@@ -22,10 +22,10 @@ class Incident(models.Model):
     type = models.CharField(max_length=20, choices=INCIDENT_TYPE)
     description = models.TextField(null=True, blank=True)
 
-    report_datetime = models.DateTimeField(auto_now_add=True)
+    report_date = models.DateField(auto_now_add=True)
     report_time = models.TimeField(auto_now_add=True)
 
-    incident_datetime = models.DateTimeField()
+    incident_date = models.DateField()
     incident_time = models.TimeField()
 
     latitude = models.FloatField(default=0.0)
@@ -40,12 +40,13 @@ class Incident(models.Model):
     )
 
     def __str__(self):
-        return f"{self.type} - {self.incident_datetime}"
+        return f"{self.type} - {self.incident_date}"
 
     class Meta:
         db_table = "incident"
         indexes = [
             models.Index(fields=["latitude", "longitude"]),
-            models.Index(fields=["incident_datetime"]),
+            models.Index(fields=["incident_date"]),
+            models.Index(fields=["incident_time"]),
             models.Index(fields=["severity"]),
         ]

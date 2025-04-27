@@ -1,9 +1,9 @@
 from django import forms
 
-from .models import Incident
+from core.models import Incident
 
 
-class IncidenteForm(forms.ModelForm):
+class IncidentForm(forms.ModelForm):
     class Meta:
         model = Incident
         fields = [
@@ -11,7 +11,7 @@ class IncidenteForm(forms.ModelForm):
             "severity",
             "latitude",
             "longitude",
-            "incident_datetime",
+            "incident_date",
             "incident_time",
             "description",
         ]
@@ -19,20 +19,21 @@ class IncidenteForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"rows": 4, "cols": 50}),
             "latitude": forms.HiddenInput(),
             "longitude": forms.HiddenInput(),
-            "incident_datetime": forms.DateInput(attrs={"type": "date"}),
+            "incident_date": forms.DateInput(attrs={"type": "date"}),
             "incident_time": forms.TimeInput(attrs={"type": "time"}),
-            "report_datetime": forms.HiddenInput(),
+            "report_date": forms.HiddenInput(),
             "report_time": forms.HiddenInput(),
         }
 
-    def clean_latitude(self):
-        latitude = self.cleaned_data.get("latitude")
-        if not latitude:
-            raise forms.ValidationError("La latitud es obligatoria.")
-        return latitude
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def clean_longitude(self):
-        longitude = self.cleaned_data.get("longitude")
-        if not longitude:
-            raise forms.ValidationError("La longitud es obligatoria.")
-        return longitude
+        self.fields["type"].label = "Tipo de incidente"
+        self.fields["severity"].label = "Gravedad"
+        # self.fields["latitude"].label = "Latitud"
+        # self.fields["longitude"].label = "Longitud"
+        self.fields["incident_date"].label = "Fecha del incidente"
+        self.fields["incident_time"].label = "Hora del incidente"
+        self.fields["description"].label = "Descripción"
+        # self.fields["report_date"].label = "Fecha del reporte"
+        # self.fields["report_time"].label = "Hora del reporte"

@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 
-from core.forms import IncidenteForm
+from core.forms import IncidentForm
 from core.logic.route_danger import (
     calculate_combined_cost,
 )
@@ -29,23 +29,24 @@ def home(request):
 
 
 def add_incident(request):
+    form = IncidentForm()
     if request.method == "POST":
-        form = IncidenteForm(request.POST)
+        form = IncidentForm(request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, "¡Incidente registrado exitosamente!")
             return redirect("add_incident")
         else:
+            logger.error(f"Ocurrió un error al registrar el incidente.")
             messages.error(request, "Hubo un error al registrar el incidente.")
-    else:
-        form = IncidenteForm()
 
     return render(request, "incident_form.html", {"form": form})
 
 
 def incident_list(request):
     incidentes = Incident.objects.all()
-    return render(request, "incident_list.html", {"incidentes": incidentes})
+    logger.info(f"Incidentes:\n" + "\n".join(str(i.__dict__) for i in incidentes))
+    return render(request, "incident_list.html", {"incidentes": tuple(incidentes)})
 
 
 @csrf_exempt
