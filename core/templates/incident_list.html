@@ -33,11 +33,11 @@
             <tbody>
             {% for incidente in incidentes %}
             <tr>
-                <td>{{ incidente.get_tipo_display }}</td>
-                <td>{{ incidente.descripcion|default:"Sin descripción" }}</td>
-                <td>{{ incidente.fecha_incidente|date:"d/m/Y H:i" }}</td>
-                <td>{{ incidente.gravedad }}</td>
-                <td>{{ incidente.get_estado_display }}</td>
+                <td>{{ incidente.get_type_display }}</td>
+                <td>{{ incidente.description|default:"Sin descripción" }}</td>
+                <td>{{ incidente.incident_date|date:"d/m/Y H:i" }}</td>
+                <td>{{ incidente.severity }}</td>
+                <td>{{ incidente.get_status_display }}</td>
             </tr>
             {% endfor %}
             </tbody>
@@ -55,8 +55,8 @@
     }).addTo(map);
 
     {% for incidente in incidentes %}
-        L.marker([{{ incidente.latitud }}, {{ incidente.longitud }}]).addTo(map)
-            .bindPopup("<b>{{ incidente.get_tipo_display }}</b><br>{{ incidente.descripcion|default:'Sin descripción' }}");
+        L.marker([{{ incidente.latitude }}, {{ incidente.longitude }}]).addTo(map)
+            .bindPopup("<b>{{ incidente.get_type_display }}</b><br>{{ incidente.description|default:'Sin descripción' }}");
     {% endfor %}
 </script>
 

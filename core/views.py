@@ -2,21 +2,24 @@
 
 import logging
 
-import osmnx as ox
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
-from geopy.distance import geodesic
 
 from core.forms import IncidenteForm
 from core.logic.route_danger import (
     calculate_combined_cost,
-    find_optimal_route,
-    calculate_route_risk,
-    get_nearby_incidents,
 )
-from core.models import Incidente
+from core.logic.route_utils import (
+    extract_route_coords,
+    get_danger_level,
+    get_incidents,
+    get_route,
+    get_graph,
+    parse_coordinates,
+)
+from core.models import Incident
 
 logger = logging.getLogger(__name__)
 
@@ -41,94 +44,50 @@ def add_incident(request):
 
 
 def incident_list(request):
-    incidentes = Incidente.objects.all()
+    incidentes = Incident.objects.all()
     return render(request, "incident_list.html", {"incidentes": incidentes})
 
 
 @csrf_exempt
 def calculate_route(request):
-    """
-    Calcula la mejor ruta entre dos puntos considerando seguridad y distancia.
-    Devuelve la ruta optimizada, el nivel de peligro y los incidentes cercanos en formato JSON.
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
 
-    Args:
-        request (HttpRequest): Solicitud con datos de origen y destino.
+    try:
+        origin_lat, origin_lon, dest_lat, dest_lon = parse_coordinates(request.POST)
+        origin = (origin_lat, origin_lon)
+        destination = (dest_lat, dest_lon)
 
-    Returns:
-        JsonResponse: Datos de la ruta, peligrosidad y incidentes cercanos.
-    """
-    if request.method == "POST":
-        try:
-            # Desempaquetado y empaquetado de coordenadas desde la solicitud
-            origin_lat, origin_lon, dest_lat, dest_lon = (
-                float(request.POST.get(c))
-                for c in ("origin_lat", "origin_lon", "dest_lat", "dest_lon")
-            )
-            origin = (origin_lat, origin_lon)
-            destination = (dest_lat, dest_lon)
-            distance_km = geodesic(origin, destination).km
-            radio = min(distance_km, 70) * 1000
-            mid_lat = (origin_lat + dest_lat) / 2
-            mid_lon = (origin_lon + dest_lon) / 2
+        logger.info(f"Origen: {origin}, Destino: {destination}")
 
-            logger.info(f"Origen: {origin}")
-            logger.info(f"Destino: {destination}")
-            logger.info(f"Distancia entre el origen y el destino: {distance_km} km")
+        graph = get_graph(origin, destination)
+        graph_with_cost = calculate_combined_cost(graph)
 
-            graph = ox.graph_from_point(
-                (mid_lat, mid_lon), dist=radio, network_type="all"
-            )
-            graph_with_combined_cost = calculate_combined_cost(graph)
-            logger.info(
-                f"Grafo obtenido con: {len(graph.nodes)} nodos y {len(graph.edges)} aristas"
-            )
+        route, origin_node, dest_node = get_route(
+            graph, graph_with_cost, origin, destination
+        )
+        logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {route}")
 
-            """# Conversión del grafo en coordenadas (lat, lon)
-            graph_latlon = map_data.build_latlon_graph(graph)"""
+        route_coords = extract_route_coords(graph, route)
+        logger.info(f"Coordenadas de la ruta: {route_coords}")
 
-            # Búsqueda de los nodos más cercanos a los puntos dados
-            try:
-                origin_node = ox.distance.nearest_nodes(graph, origin_lon, origin_lat)
-                dest_node = ox.distance.nearest_nodes(graph, dest_lon, dest_lat)
-                optimal_route = find_optimal_route(
-                    graph_with_combined_cost, origin_node, dest_node
-                )
-            except Exception as e:
-                logger.error(f"Ocurrió un error: {e}", exc_info=True)
-                raise
+        danger_level = get_danger_level(origin_lat, origin_lon)
+        logger.info(f"Nivel de peligro de la ruta: {danger_level}")
 
-            logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {optimal_route}")
+        incidents = get_incidents(origin_lat, origin_lon)
+        logger.info(f"Incidentes de la ruta: {incidents}")
 
-            # Obtener las coordenadas de la ruta
-            route_coords = [
-                (graph.nodes[node]["y"], graph.nodes[node]["x"])
-                for node in optimal_route
-            ]
-            logger.info(f"Coordenadas de la ruta: {route_coords}")
+        return JsonResponse(
+            {
+                "route": route_coords,
+                "dangerLevel": danger_level,
+                "incidents": incidents,
+            }
+        )
 
-            # Nivel de peligrosidad de la ruta (solo un ejemplo de cálculo)
-            danger_level = calculate_route_risk(
-                origin_lat, origin_lon, 500
-            )  # Asumiendo función de cálculo del riesgo
-            logger.info(f"Nivel de peligrosidad de la ruta: {danger_level}")
-
-            # Datos de los incidentes cercanos (esto dependerá de tu base de datos de incidentes)
-            incidents = get_nearby_incidents(
-                origin_lat, origin_lon, 500
-            )  # Asumiendo una función para obtener los incidentes cercanos
-            logger.info(f"Incidentes cercanos a la ruta: {incidents}")
-
-            # Responder con los datos en formato JSON
-            return JsonResponse(
-                {
-                    "route": route_coords,
-                    "dangerLevel": danger_level,
-                    "incidents": incidents,
-                }
-            )
-
-        except Exception as e:
-            logger.error(f"Ocurrió un error: {e}", exc_info=True)
-            return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    except ValueError as e:
+        logger.warning(f"Error de validación: {e}")
+        return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Ocurrió un error: {e}", exc_info=True)
+        return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)

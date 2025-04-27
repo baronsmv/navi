@@ -1,39 +1,38 @@
 from django import forms
 
-from .models import Incidente
+from .models import Incident
 
 
 class IncidenteForm(forms.ModelForm):
     class Meta:
-        model = Incidente
+        model = Incident
         fields = [
-            "tipo",
-            "gravedad",
-            "latitud",
-            "longitud",
-            "fecha_incidente",
-            "hora_incidente",
-            "descripcion",
+            "type",
+            "severity",
+            "latitude",
+            "longitude",
+            "incident_datetime",
+            "incident_time",
+            "description",
         ]
         widgets = {
-            "descripcion": forms.Textarea(attrs={"rows": 4, "cols": 50}),
-            "latitud": forms.HiddenInput(),
-            "longitud": forms.HiddenInput(),
-            "fecha_incidente": forms.DateInput(attrs={"type": "date"}),
-            "hora_incidente": forms.TimeInput(attrs={"type": "time"}),
-            "fecha_registro": forms.HiddenInput(),
-            "hora_registro": forms.HiddenInput(),
+            "description": forms.Textarea(attrs={"rows": 4, "cols": 50}),
+            "latitude": forms.HiddenInput(),
+            "longitude": forms.HiddenInput(),
+            "incident_datetime": forms.DateInput(attrs={"type": "date"}),
+            "incident_time": forms.TimeInput(attrs={"type": "time"}),
+            "report_datetime": forms.HiddenInput(),
+            "report_time": forms.HiddenInput(),
         }
 
-    # Validación adicional si lo necesitas
-    def clean_latitud(self):
-        latitud = self.cleaned_data.get("latitud")
-        if not latitud:
+    def clean_latitude(self):
+        latitude = self.cleaned_data.get("latitude")
+        if not latitude:
             raise forms.ValidationError("La latitud es obligatoria.")
-        return latitud
+        return latitude
 
-    def clean_longitud(self):
-        longitud = self.cleaned_data.get("longitud")
-        if not longitud:
+    def clean_longitude(self):
+        longitude = self.cleaned_data.get("longitude")
+        if not longitude:
             raise forms.ValidationError("La longitud es obligatoria.")
-        return longitud
+        return longitude

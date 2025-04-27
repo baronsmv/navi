@@ -2,7 +2,7 @@ import networkx as nx
 from django.contrib.gis.geos import Point
 
 from core.logic.fuzzy_logic import calculate_fuzzy_danger
-from core.models import Incidente
+from core.models import Incident
 
 
 def get_nearby_incidents(node_lat, node_lon, radius=500):
@@ -18,8 +18,10 @@ def get_nearby_incidents(node_lat, node_lon, radius=500):
         list: Lista de incidentes cercanos.
     """
     node_point = Point(node_lon, node_lat, srid=4326)
-    incidents = Incidente.objects.filter(location__distance_lte=(node_point, radius))
-    return incidents
+    incidents = Incident.objects.filter(
+        location__distance_lte=(node_point, radius)
+    ).values("latitude", "longitude", "type", "severity", "status")
+    return list(incidents)
 
 
 def calculate_route_risk(node_lat, node_lon, radius=500):

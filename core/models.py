@@ -4,59 +4,48 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 
 
-class Incidente(models.Model):
-    TIPO_INCIDENTE = [
-        ("asalto", "Asalto"),
-        ("choque", "Choque"),
-        ("homicidio", "Homicidio"),
-        ("robo", "Robo"),
-        ("otro", "Otro"),
+class Incident(models.Model):
+    INCIDENT_TYPE = [
+        ("assault", "Asalto"),
+        ("crash", "Choque"),
+        ("homicide", "Homicidio"),
+        ("robbery", "Robo"),
+        ("other", "Otro"),
     ]
 
-    ESTADO_INCIDENTE = [
-        ("en_proceso", "En Proceso"),
-        ("resuelto", "Resuelto"),
-        ("no_resuelto", "No Resuelto"),
+    INCIDENT_STATUS = [
+        ("in_progress", "En Proceso"),
+        ("resolved", "Resuelto"),
+        ("unresolved", "No Resuelto"),
     ]
 
-    tipo = models.CharField(max_length=20, choices=TIPO_INCIDENTE)
-    descripcion = models.TextField(null=True, blank=True)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
-    hora_registro = models.TimeField(auto_now_add=True)
-    fecha_incidente = models.DateTimeField()
-    hora_incidente = models.TimeField()
-    latitud = models.FloatField(default=0.0)
-    longitud = models.FloatField(default=0.0)
+    type = models.CharField(max_length=20, choices=INCIDENT_TYPE)
+    description = models.TextField(null=True, blank=True)
+
+    report_datetime = models.DateTimeField(auto_now_add=True)
+    report_time = models.TimeField(auto_now_add=True)
+
+    incident_datetime = models.DateTimeField()
+    incident_time = models.TimeField()
+
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
+
     location = models.PointField(geography=True, srid=4326, default=Point(0.0, 0.0))
-    gravedad = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])  # 1 a 5
-    estado = models.CharField(
-        max_length=20, choices=ESTADO_INCIDENTE, default="no_resuelto"
-    )
-    zona_riesgo = models.ForeignKey(
-        "ZonaRiesgo", null=True, blank=True, on_delete=models.SET_NULL
+
+    severity = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])  # 1 to 5
+
+    status = models.CharField(
+        max_length=20, choices=INCIDENT_STATUS, default="unresolved"
     )
 
     def __str__(self):
-        return f"{self.tipo} - {self.fecha_incidente}"
+        return f"{self.type} - {self.incident_datetime}"
 
     class Meta:
-        db_table = "incidente"
+        db_table = "incident"
         indexes = [
-            models.Index(fields=["latitud", "longitud"]),
-            models.Index(fields=["fecha_incidente"]),
-            models.Index(fields=["gravedad"]),
+            models.Index(fields=["latitude", "longitude"]),
+            models.Index(fields=["incident_datetime"]),
+            models.Index(fields=["severity"]),
         ]
-
-
-class ZonaRiesgo(models.Model):
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField(null=True, blank=True)
-    poligono = (
-        models.PolygonField()
-    )  # Se usa un tipo de dato geográfico para definir zonas de riesgo
-
-    def __str__(self):
-        return self.nombre
-
-    class Meta:
-        db_table = "zonariesgo"
