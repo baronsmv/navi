@@ -44,8 +44,8 @@ def add_incident(request):
 
 
 def incident_list(request):
-    incidentes_qs = Incident.objects.exclude(latitude=0, longitude=0)
-    incidentes_data = [
+    incidents_qs = Incident.objects.exclude(latitude=0, longitude=0)
+    incidents_data = [
         {
             "lat": i.latitude,
             "lon": i.longitude,
@@ -53,12 +53,12 @@ def incident_list(request):
             "tipo": i.get_type_display(),
             "descripcion": i.description or "Sin descripción",
         }
-        for i in incidentes_qs
+        for i in incidents_qs
     ]
     return render(
         request,
         "incident_list.html",
-        {"incidentes": incidentes_qs, "incidentes_json": json.dumps(incidentes_data)},
+        {"incidents": incidents_qs, "incidents_json": json.dumps(incidents_data)},
     )
 
 
