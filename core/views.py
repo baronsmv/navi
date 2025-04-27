@@ -49,6 +49,7 @@ def incident_list(request):
         {
             "lat": i.latitude,
             "lon": i.longitude,
+            "severity": i.severity,
             "tipo": i.get_type_display(),
             "descripcion": i.description or "Sin descripción",
         }

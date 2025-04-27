@@ -61,3 +61,19 @@ header p {
     margin-top: 20px;
     border-radius: 5px;
 }
+
+.leaflet-circle {
+    border-radius: 50%;
+}
+
+/* Asegurarnos de que el resaltado sea visible */
+tr.highlight {
+    background-color: #ffeb3b !important;  /* Color de fondo brillante para resaltar */
+    color: #333 !important;  /* Asegurarnos de que el texto tenga suficiente contraste */
+    transition: background-color 0.3s ease-in-out;
+}
+
+/* Asegurar que el texto no se sobreponga */
+tr.highlight td {
+    color: #333 !important; /* Texto oscuro para contraste */
+}
