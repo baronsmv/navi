@@ -35,15 +35,6 @@
         <div class="form-container">
             {{ form.as_p }}
         </div>
-        <script>
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    // Asignar los valores de latitud y longitud a los campos ocultos
-                    document.getElementById("id_latitud").value = position.coords.latitude;
-                    document.getElementById("id_longitud").value = position.coords.longitude;
-                });
-            }
-        </script>
         <div id="map"></div>
         <button type="submit" class="btn">Registrar Incidente</button>
     </form>

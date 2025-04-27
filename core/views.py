@@ -1,5 +1,5 @@
 # core.views.py
-
+import json
 import logging
 
 from django.contrib import messages
@@ -44,9 +44,21 @@ def add_incident(request):
 
 
 def incident_list(request):
-    incidentes = Incident.objects.all()
-    logger.info(f"Incidentes:\n" + "\n".join(str(i.__dict__) for i in incidentes))
-    return render(request, "incident_list.html", {"incidentes": tuple(incidentes)})
+    incidentes_qs = Incident.objects.exclude(latitude=0, longitude=0)
+    incidentes_data = [
+        {
+            "lat": i.latitude,
+            "lon": i.longitude,
+            "tipo": i.get_type_display(),
+            "descripcion": i.description or "Sin descripción",
+        }
+        for i in incidentes_qs
+    ]
+    return render(
+        request,
+        "incident_list.html",
+        {"incidentes": incidentes_qs, "incidentes_json": json.dumps(incidentes_data)},
+    )
 
 
 @csrf_exempt
