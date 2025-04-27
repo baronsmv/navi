@@ -26,6 +26,7 @@
                 <th>Tipo</th>
                 <th>Descripción</th>
                 <th>Fecha</th>
+                <th>Hora</th>
                 <th>Gravedad</th>
                 <th>Estado</th>
             </tr>
@@ -35,7 +36,8 @@
             <tr>
                 <td>{{ incidente.get_type_display }}</td>
                 <td>{{ incidente.description|default:"Sin descripción" }}</td>
-                <td>{{ incidente.incident_date|date:"d/m/Y H:i" }}</td>
+                <td>{{ incidente.incident_date|date:"d/m/Y" }}</td>
+                <td>{{ incidente.incident_time|date:"H:i" }}</td>
                 <td>{{ incidente.severity }}</td>
                 <td>{{ incidente.get_status_display }}</td>
             </tr>
