@@ -29,7 +29,7 @@ function createIncidentMarker(incident) {
         fillColor: markerColor,
         fillOpacity: 0.6,
         radius: 8
-    }).bindPopup(`<b>${incident.type}</b><br>${incident.description}`);
+    }).bindPopup(`<b>${incident.type}<br>${incident.date}</b><br>${incident.description}`);
 }
 
 function getMarkers(incidents, map) {
