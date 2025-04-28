@@ -44,9 +44,9 @@ def add_incident(request):
     return render(request, "incident_form.html", {"form": form})
 
 
-def incident_list(request):
+def prepare_incidents():
     incidents_qs = Incident.objects.exclude(latitude=0, longitude=0)
-    incidents_data = [
+    incidents_data = tuple(
         {
             "lat": i.latitude,
             "lon": i.longitude,
@@ -56,11 +56,15 @@ def incident_list(request):
             "description": i.description or "Sin descripción",
         }
         for i in incidents_qs
-    ]
+    )
+    return {"incidents": incidents_qs, "incidents_json": json.dumps(incidents_data)}
+
+
+def incident_list(request):
     return render(
         request,
         "incident_list.html",
-        {"incidents": incidents_qs, "incidents_json": json.dumps(incidents_data)},
+        prepare_incidents(),
     )
 
 
@@ -97,6 +101,7 @@ def calculate_route(request):
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
+                # **prepare_incidents(),
                 "incidents": incidents,
             }
         )
