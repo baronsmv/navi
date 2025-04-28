@@ -1,30 +1,26 @@
+// Configuración inicial del mapa
 const map = L.map('map').setView([20.1011, -98.7591], 13); // Pachuca
-
 initTileLayer(map);
 
-let originMarker, destMarker, routeLine, incidentMarkers = [];
-let originCoords = null;
-let destCoords = null;
+let originMarker, destMarker, routeLine;
+let incidentMarkers = [];
+let originCoords = null, destCoords = null;
 
+// Elementos del DOM
+const resetBtn = document.getElementById('resetBtn');
+const dangerText = document.getElementById('danger');
+
+// Función para reiniciar el mapa
+resetBtn.addEventListener('click', resetMap);
+
+// Función para manejar clics en el mapa
 map.on('click', function (e) {
+    const latlng = [e.latlng.lat, e.latlng.lng];
+
     if (!originCoords) {
-        originCoords = [e.latlng.lat, e.latlng.lng];
-        originMarker = L.marker(originCoords).addTo(map)
-            .bindPopup("Origen").openPopup();
+        setOrigin(latlng);
     } else if (!destCoords) {
-        destCoords = [e.latlng.lat, e.latlng.lng];
-        destMarker = L.marker(destCoords).addTo(map)
-            .bindPopup("Destino").openPopup();
+        setDestination(latlng);
         calculateRoute();
     }
-});
-
-document.getElementById('resetBtn').addEventListener('click', () => {
-    if (originMarker) map.removeLayer(originMarker);
-    if (destMarker) map.removeLayer(destMarker);
-    if (routeLine) map.removeLayer(routeLine);
-    incidentMarkers.forEach(m => map.removeLayer(m));
-    incidentMarkers = [];
-    originCoords = destCoords = null;
-    document.getElementById('danger').innerText = "Nivel de peligrosidad: --";
 });

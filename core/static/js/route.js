@@ -71,3 +71,33 @@ function calculateRoute() {
             console.error("Error:", error);
         });
 }
+
+function setOrigin(latlng) {
+    originCoords = latlng;
+    originMarker = L.marker(originCoords).addTo(map)
+        .bindPopup("Origen").openPopup();
+}
+
+function setDestination(latlng) {
+    destCoords = latlng;
+    destMarker = L.marker(destCoords).addTo(map)
+        .bindPopup("Destino").openPopup();
+}
+
+function removeMarker(marker) {
+    if (marker) map.removeLayer(marker);
+}
+
+function removeIncidentMarkers() {
+    incidentMarkers.forEach(m => map.removeLayer(m));
+    incidentMarkers = [];
+}
+
+function resetMap() {
+    removeMarker(originMarker);
+    removeMarker(destMarker);
+    if (routeLine) map.removeLayer(routeLine);
+    removeIncidentMarkers();
+    originCoords = destCoords = null;
+    dangerText.innerText = "Nivel de peligrosidad: --";
+}
