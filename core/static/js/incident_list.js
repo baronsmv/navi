@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log(L);
     const map = L.map('map');
     initTileLayer(map);
 

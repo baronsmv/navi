@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Ruta Segura</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     {% load static %}
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+    <!-- Carga de estilos -->
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -21,8 +22,15 @@
 
 <div id="map"></div>
 
-<!-- Leaflet JS -->
+<!-- Datos de incidentes en JSON -->
+<div data-incidents='{{ incidents_json|safe }}' id="incident-data"></div>
+
+<!-- Carga de scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/map_common.js' %}"></script>
+<script src="{% static 'js/incident.js' %}"></script>
+<script src="{% static 'js/route.js' %}"></script>
 <script src="{% static 'js/main.js' %}"></script>
+
 </body>
 </html>
