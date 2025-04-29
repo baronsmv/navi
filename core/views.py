@@ -57,6 +57,7 @@ def prepare_incidents():
         }
         for i in incidents_qs
     )
+    logger.info(f"Preparing incidents:\n{incidents_data}")
     return {"incidents": incidents_qs, "incidents_json": json.dumps(incidents_data)}
 
 
