@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.gis.geos import Point
 
 from core.models import Incident
 
@@ -30,10 +31,15 @@ class IncidentForm(forms.ModelForm):
 
         self.fields["type"].label = "Tipo de incidente"
         self.fields["severity"].label = "Gravedad"
-        # self.fields["latitude"].label = "Latitud"
-        # self.fields["longitude"].label = "Longitud"
         self.fields["incident_date"].label = "Fecha del incidente"
         self.fields["incident_time"].label = "Hora del incidente"
         self.fields["description"].label = "Descripción"
-        # self.fields["report_date"].label = "Fecha del reporte"
-        # self.fields["report_time"].label = "Hora del reporte"
+
+    def save(self, commit=True):
+        latitude = self.cleaned_data.get("latitude")
+        longitude = self.cleaned_data.get("longitude")
+
+        if latitude is not None and longitude is not None:
+            self.instance.location = Point(longitude, latitude, srid=4326)
+
+        return super().save(commit)

@@ -1,8 +1,10 @@
-# core.logic.fuzzy_logic.py
+import logging
 
 import numpy as np
 import skfuzzy as fuzz
 import skfuzzy.control as ctrl
+
+logger = logging.getLogger(__name__)
 
 
 def create_fuzzy_variable(

@@ -1,11 +1,19 @@
+import logging
+
 import networkx as nx
 from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 
 from core.logic.fuzzy_logic import calculate_fuzzy_danger
 from core.models import Incident
+from utils.config_loader import config
+
+logger = logging.getLogger(__name__)
 
 
-def get_nearby_incidents(node_lat, node_lon, radius=500):
+def get_nearby_incidents(
+    node_lat, node_lon, radius=config["risk_calculation"]["radius"]
+):
     """
     Obtiene los incidentes cercanos a un nodo en el grafo dentro de un radio especificado.
 
@@ -19,12 +27,14 @@ def get_nearby_incidents(node_lat, node_lon, radius=500):
     """
     node_point = Point(node_lon, node_lat, srid=4326)
     incidents = Incident.objects.filter(
-        location__distance_lte=(node_point, radius)
-    ).values("latitude", "longitude", "type", "severity", "status")
+        location__distance_lte=(node_point, D(m=radius))
+    )
     return list(incidents)
 
 
-def calculate_route_risk(node_lat, node_lon, radius=500):
+def calculate_route_risk(
+    node_lat, node_lon, radius=config["risk_calculation"]["radius"]
+):
     """
     Calcula el nivel de peligro de una ruta (arista) basada en los incidentes cercanos.
 
@@ -42,15 +52,21 @@ def calculate_route_risk(node_lat, node_lon, radius=500):
         return 0.0  # No hay incidentes, ruta segura
 
     # Calcular el número de incidentes y la gravedad promedio
+    logger.info("Se encontraron incidentes cercanos.")
     num_incidents = len(incidents)
-    avg_gravity = sum([incidente.gravedad for incidente in incidents]) / num_incidents
+    avg_gravity = sum([incidente.severity for incidente in incidents]) / num_incidents
 
     # Calcular el riesgo usando la lógica difusa
     risk = calculate_fuzzy_danger(num_incidents, avg_gravity)
+    logging.info(f"Riesgo del nodo: {risk}")
     return risk
 
 
-def calculate_combined_cost(graph, radius=500, weight_security: int = 0.8):
+def calculate_combined_cost(
+    graph,
+    radius: int = config["risk_calculation"]["radius"],
+    weight_security: int = config["risk_calculation"]["w_safety"],
+):
     """
     Asigna un costo combinado (seguridad y rapidez) a cada arista del grafo.
 
