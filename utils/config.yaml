@@ -1,7 +1,7 @@
 # core/logic/config.yaml
 
 risk_calculation:
-  radius: 10000  # Radio para buscar incidentes alrededor del nodo
+  radius: 100  # Radio (en metros) para buscar incidentes alrededor del nodo
   w_safety: 0.8  # Valor de prioridad de la seguridad (entre el 0 y el 1)
   gravedad_max: 5     # Valor máximo esperado de gravedad (para normalizar)
 

@@ -52,13 +52,11 @@ def calculate_route_risk(
         return 0.0  # No hay incidentes, ruta segura
 
     # Calcular el número de incidentes y la gravedad promedio
-    logger.info("Se encontraron incidentes cercanos.")
     num_incidents = len(incidents)
     avg_gravity = sum([incidente.severity for incidente in incidents]) / num_incidents
 
     # Calcular el riesgo usando la lógica difusa
     risk = calculate_fuzzy_danger(num_incidents, avg_gravity)
-    logging.info(f"Riesgo del nodo: {risk}")
     return risk
 
 
@@ -80,28 +78,19 @@ def calculate_combined_cost(
     """
     weight_speed = 1 - weight_security
     for u, v, data in graph.edges(data=True):
-        u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
-        v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
+        route_nodes = nx.shortest_path(graph, u, v, weight="combined_cost")
+        total_risk = 0
+        for node in route_nodes:
+            node_lat, node_lon = graph.nodes[node]["y"], graph.nodes[node]["x"]
+            total_risk += calculate_route_risk(node_lat, node_lon, radius)
 
-        # Calcular el riesgo de cada nodo
-        risk_u = calculate_route_risk(u_lat, u_lon, radius)
-        risk_v = calculate_route_risk(v_lat, v_lon, radius)
+        avg_risk = total_risk / len(route_nodes)
+        distance = data["length"]
 
-        # Promedio del riesgo de los dos nodos
-        avg_risk = (risk_u + risk_v) / 2
-
-        # Calcular la distancia entre los dos nodos (puedes usar el 'length' de la arista)
-        distance = data["length"]  # Longitud de la arista (en metros)
-
-        # Si prefieres tiempo de viaje en lugar de distancia, puedes convertirlo a tiempo
-        # Supón que la velocidad promedio es de 50 km/h (esto es solo un ejemplo)
         speed = 50 / 3.6  # Velocidad en metros por segundo
         travel_time = distance / speed  # Tiempo de viaje en segundos
 
-        # Calcular el costo combinado
         combined_cost = (avg_risk * weight_security) + (travel_time * weight_speed)
-
-        # Asignar el costo combinado como peso de la arista
         data["combined_cost"] = combined_cost
 
     return graph

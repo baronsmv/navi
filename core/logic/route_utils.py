@@ -44,8 +44,8 @@ def extract_route_coords(graph, route):
 
 
 def get_danger_level(origin_lat, origin_lon):
-    return calculate_route_risk(origin_lat, origin_lon, 500)
+    return calculate_route_risk(origin_lat, origin_lon)
 
 
 def get_incidents(origin_lat, origin_lon):
-    return get_nearby_incidents(origin_lat, origin_lon, 500)
+    return get_nearby_incidents(origin_lat, origin_lon)

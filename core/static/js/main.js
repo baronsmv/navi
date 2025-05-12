@@ -1,26 +1,33 @@
-// Configuración inicial del mapa
-const map = L.map('map').setView([20.1011, -98.7591], 13); // Pachuca
-initTileLayer(map);
+document.addEventListener('DOMContentLoaded', () => {
+    const map = L.map('map').setView([20.1011, -98.7591], 13);
+    initTileLayer(map);
 
-let originMarker, destMarker, routeLine;
-let incidentMarkers = [];
-let originCoords = null, destCoords = null;
+    const resetBtn = document.getElementById('resetBtn');
+    const dangerText = document.getElementById('danger');
 
-// Elementos del DOM
-const resetBtn = document.getElementById('resetBtn');
-const dangerText = document.getElementById('danger');
+    // Estado centralizado
+    const mapState = {
+        originCoords: null,
+        destCoords: null,
+        originMarker: null,
+        destMarker: null,
+        routeLine: null,
+        incidentMarkers: []
+    };
 
-// Función para reiniciar el mapa
-resetBtn.addEventListener('click', resetMap);
+    resetBtn.addEventListener('click', () => resetMap(map, mapState, dangerText));
 
-// Función para manejar clics en el mapa
-map.on('click', function (e) {
-    const latlng = [e.latlng.lat, e.latlng.lng];
+    // const incidents = getIncidents();
+    // mapState.incidentMarkers = getMarkers(incidents, map);
 
-    if (!originCoords) {
-        setOrigin(latlng);
-    } else if (!destCoords) {
-        setDestination(latlng);
-        calculateRoute();
-    }
+    map.on('click', function (e) {
+        const latlng = [e.latlng.lat, e.latlng.lng];
+
+        if (!mapState.originCoords) {
+            setOrigin(map, latlng, mapState);
+        } else if (!mapState.destCoords) {
+            setDestination(map, latlng, mapState);
+            calculateRoute(map, mapState, dangerText);
+        }
+    });
 });
