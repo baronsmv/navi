@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def create_fuzzy_variable(
     name: str, universe: ndarray, membership: dict, is_consequent: bool = False
-) -> ctrl.Antecedent:
+) -> ctrl.Antecedent | ctrl.Consequent:
     """
     Crea una variable difusa con funciones de pertenencia.
 
@@ -21,7 +21,7 @@ def create_fuzzy_variable(
         is_consequent (bool): Es consecuente o, en su defecto, antecedente.
 
     Returns:
-        ctrl.Antecedent: Variable difusa configurada.
+        ctrl.Antecedent | ctrl.Consequent: Variable difusa configurada.
     """
     variable = (
         ctrl.Consequent(universe, name)
@@ -54,60 +54,35 @@ def build_fuzzy_system(plot: bool = False) -> ctrl.ControlSystem:
     incidents = create_fuzzy_variable(
         "incidents",
         incidents_universe,
-        {"low": (5, 2, 5), "moderate": (8, 3, 20), "high": (10, 4, 40)},
+        {"low": (5, 2, 0), "moderate": (14, 3, 25), "high": (10, 4, 50)},
     )
     gravity = create_fuzzy_variable(
         "gravity",
         gravity_universe,
-        {"low": (0.5, 3, 1.5), "moderate": (0.7, 3.5, 3), "high": (0.9, 4, 4.5)},
+        {"low": (0.5, 3, 1), "moderate": (0.7, 3.5, 2.5), "high": (0.9, 4, 5)},
     )
     risk_zone = create_fuzzy_variable(
         "risk_zone",
         risk_zone_universe,
-        {"near": (15, 2, 15), "moderate": (20, 3, 50), "far": (25, 4, 85)},
+        {"near": (15, 2, 0), "moderate": (20, 3, 50), "far": (25, 4, 100)},
     )
     time = create_fuzzy_variable(
         "time",
         time_universe,
-        {"recent": (10, 2, 10), "medium": (15, 3, 35), "old": (20, 4, 60)},
+        {"recent": (10, 2, 0), "medium": (15, 3, 30), "old": (20, 4, 60)},
     )
     danger = create_fuzzy_variable(
         "danger",
         danger_universe,
         {
-            "safe": (0.1, 2, 0.1),
+            "safe": (0.1, 2, 0),
             "low": (0.15, 3, 0.3),
             "moderate": (0.2, 3.5, 0.55),
             "high": (0.25, 4, 0.75),
-            "very_high": (0.3, 4.5, 0.9),
+            "very_high": (0.3, 4.5, 1),
         },
         is_consequent=True,
     )
-
-    def plot_fis():
-        from matplotlib import pyplot as plt
-
-        plt.figure(figsize=(12, 6))
-
-        for i, (var_name, (universe, functions)) in enumerate(fuzzy_variables.items()):
-            plt.subplot(2, 3, i + 1)
-            for label, params in functions.items():
-                plt.plot(universe, fuzz.gbellmf(universe, *params), label=label)
-
-            plt.title(var_name)
-            plt.xlabel("Valor")
-            plt.ylabel("Membresía")
-            plt.legend()
-            plt.grid(True)
-
-        plt.tight_layout()
-        plt.savefig(
-            "fuzzy_system_membership.png", dpi=300
-        )  # Guardar imagen en alta calidad
-        plt.show()
-
-    if plot:
-        plot_fis()
 
     # Reglas difusas
     categories = {
@@ -212,7 +187,7 @@ def build_fuzzy_system(plot: bool = False) -> ctrl.ControlSystem:
     return ctrl.ControlSystem(rules)
 
 
-fuzzy_system = build_fuzzy_system(plot=__name__ == "__main__")
+fuzzy_system = build_fuzzy_system(plot=True)
 
 
 def calculate_fuzzy_danger(
@@ -255,5 +230,6 @@ def calculate_fuzzy_danger(
 
     # Cálculo de salida
     simulator.compute()
+    danger = round(simulator.output["danger"], 2)
 
-    return round(simulator.output["danger"], 2)
+    return danger

@@ -14,16 +14,8 @@ function getIncidents() {
     }
 }
 
-function getMarkerColor(severity) {
-    const scale = d3.scaleLinear()
-        .domain([0, 1, 2, 3, 4, 5]) // Severity scale
-        .range(['green', 'yellow', 'orange', 'red', 'darkred']); // Color range
-
-    return scale(severity);
-}
-
 function createIncidentMarker(incident) {
-    const markerColor = getMarkerColor(incident.severity);
+    const markerColor = getColor(incident.severity, [0, 1, 2, 3, 4, 5]);
     return L.circleMarker([incident.lat, incident.lon], {
         color: markerColor,
         fillColor: markerColor,

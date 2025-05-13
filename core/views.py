@@ -44,13 +44,13 @@ def add_incident(request):
     return render(request, "incident_form.html", {"form": form})
 
 
-def serialize_incidents(incidents=None):
+def serialize_incidents(incidents=None, json_dump=True):
     incidents = (
-        incidents
-        if incidents is not None
-        else Incident.objects.exclude(latitude=0, longitude=0)
+        Incident.objects.exclude(latitude=0, longitude=0)
+        if incidents is None
+        else incidents
     )
-    incidents_data = tuple(
+    incidents_data = [
         {
             "lat": i.latitude,
             "lon": i.longitude,
@@ -60,9 +60,12 @@ def serialize_incidents(incidents=None):
             "description": i.description or "Sin descripción",
         }
         for i in incidents
-    )
+    ]
     logger.info(f"Serializando la información de incidentes:\n{incidents_data}")
-    return {"incidents": incidents, "incidents_json": json.dumps(incidents_data)}
+    return {
+        "incidents": incidents,
+        "incidents_json": json.dumps(incidents_data) if json_dump else incidents_data,
+    }
 
 
 def incident_list(request):
@@ -106,7 +109,7 @@ def calculate_route(request):
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
-                "incidents_json": serialize_incidents(incidents)["incidents_json"],
+                "incidents": serialize_incidents(incidents, False)["incidents_json"],
             }
         )
 

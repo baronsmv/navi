@@ -4,3 +4,11 @@ function initTileLayer(map) {
         detectRetina: true,
     }).addTo(map);
 }
+
+function getColor(severity, domain) {
+    const scale = d3.scaleLinear()
+        .domain(domain)  // Usa el dominio pasado como argumento
+        .range(['green', 'yellow', 'orange', 'red', 'darkred']); // Color range
+
+    return scale(severity);
+}

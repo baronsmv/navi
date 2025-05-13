@@ -101,7 +101,11 @@ def weighted_average(values: tuple):
     return float(average(values, weights=tuple(1 / d if d != 0 else 1 for d in values)))
 
 
-def route_risk(incidents, graph, route):
+def route_risk(
+    incidents,
+    graph,
+    route,
+):
     """
     Calcula el riesgo total de todos los nodos de la ruta.
 
