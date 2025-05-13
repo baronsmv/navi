@@ -19,6 +19,7 @@ PyYAML = "*"
 [dev-packages]
 pytest = "*"
 pytest-django = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.11"

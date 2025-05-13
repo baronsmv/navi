@@ -3,7 +3,7 @@ from datetime import date, time
 import pytest
 from django.contrib.gis.geos import Point
 
-from core.logic.route_danger import get_nearby_incidents
+from core.logic.route_danger import node_incidents
 from core.models import Incident
 
 
@@ -28,7 +28,7 @@ def test_get_nearby_incidents_within_radius():
     radius = 100  # metros
 
     # Ejecutar función
-    results = get_nearby_incidents(node_lat, node_lon, radius)
+    results = node_incidents(node_lat, node_lon, radius)
 
     # Verificar que se incluye el incidente
     assert len(results) == 1

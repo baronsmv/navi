@@ -5,8 +5,6 @@ from geopy.distance import geodesic
 
 from core.logic.route_danger import (
     find_optimal_route,
-    calculate_route_risk,
-    get_nearby_incidents,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,11 +39,3 @@ def get_route(graph, graph_with_cost, origin, destination):
 
 def extract_route_coords(graph, route):
     return [(graph.nodes[node]["y"], graph.nodes[node]["x"]) for node in route]
-
-
-def get_danger_level(origin_lat, origin_lon):
-    return calculate_route_risk(origin_lat, origin_lon)
-
-
-def get_incidents(origin_lat, origin_lon):
-    return get_nearby_incidents(origin_lat, origin_lon)

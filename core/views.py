@@ -11,11 +11,11 @@ from django.views.decorators.csrf import csrf_exempt
 from core.forms import IncidentForm
 from core.logic.route_danger import (
     calculate_combined_cost,
+    route_risk,
+    route_incidents,
 )
 from core.logic.route_utils import (
     extract_route_coords,
-    get_danger_level,
-    get_incidents,
     get_route,
     get_graph,
     parse_coordinates,
@@ -44,10 +44,10 @@ def add_incident(request):
     return render(request, "incident_form.html", {"form": form})
 
 
-def prepare_incidents(origin_lat: float | None = None, origin_lon: float | None = None):
-    incidents_qs = (
-        get_incidents(origin_lat, origin_lon)
-        if origin_lat is not None and origin_lon is not None
+def serialize_incidents(incidents=None):
+    incidents = (
+        incidents
+        if incidents is not None
         else Incident.objects.exclude(latitude=0, longitude=0)
     )
     incidents_data = tuple(
@@ -59,17 +59,17 @@ def prepare_incidents(origin_lat: float | None = None, origin_lon: float | None 
             "date": str(i.incident_date),
             "description": i.description or "Sin descripción",
         }
-        for i in incidents_qs
+        for i in incidents
     )
     logger.info(f"Serializando la información de incidentes:\n{incidents_data}")
-    return {"incidents": incidents_qs, "incidents_json": json.dumps(incidents_data)}
+    return {"incidents": incidents, "incidents_json": json.dumps(incidents_data)}
 
 
 def incident_list(request):
     return render(
         request,
         "incident_list.html",
-        prepare_incidents(),
+        serialize_incidents(),
     )
 
 
@@ -96,17 +96,17 @@ def calculate_route(request):
         route_coords = extract_route_coords(graph, route)
         logger.info(f"Coordenadas de la ruta: {route_coords}")
 
-        danger_level = get_danger_level(origin_lat, origin_lon)
-        logger.info(f"Nivel de peligro de la ruta: {danger_level}")
-
-        incidents = prepare_incidents(origin_lat, origin_lon)["incidents_json"]
+        incidents = route_incidents(graph, route)
         logger.info(f"Incidentes de la ruta: {incidents}")
+
+        danger_level = route_risk(incidents, graph, route)
+        logger.info(f"Nivel de peligro de la ruta: {danger_level}")
 
         return JsonResponse(
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
-                "incidents_json": incidents,
+                "incidents_json": serialize_incidents(incidents)["incidents_json"],
             }
         )
 

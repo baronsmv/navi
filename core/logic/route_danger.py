@@ -3,6 +3,9 @@ import logging
 import networkx as nx
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+from django.utils.timezone import now
+from geopy.distance import geodesic
+from numpy import average
 
 from core.logic.fuzzy_logic import calculate_fuzzy_danger
 from core.models import Incident
@@ -11,9 +14,7 @@ from utils.config_loader import config
 logger = logging.getLogger(__name__)
 
 
-def get_nearby_incidents(
-    node_lat, node_lon, radius=config["risk_calculation"]["radius"]
-):
+def node_incidents(node_lat, node_lon, radius=config["risk_calculation"]["radius"]):
     """
     Obtiene los incidentes cercanos a un nodo en el grafo dentro de un radio especificado.
 
@@ -23,74 +24,153 @@ def get_nearby_incidents(
         radius (int): Radio en metros dentro del cual buscar los incidentes.
 
     Returns:
-        list: Lista de incidentes cercanos.
+        tuple: Lista de incidentes cercanos.
     """
     node_point = Point(node_lon, node_lat, srid=4326)
     incidents = Incident.objects.filter(
         location__distance_lte=(node_point, D(m=radius))
     )
-    return list(incidents)
+    return tuple(incidents)
 
 
-def calculate_route_risk(
-    node_lat, node_lon, radius=config["risk_calculation"]["radius"]
-):
+def route_incidents(graph, route, radius=config["risk_calculation"]["radius"]):
     """
-    Calcula el nivel de peligro de una ruta (arista) basada en los incidentes cercanos.
+    Recolecta todos los incidentes de los nodos en la ruta.
 
     Args:
-        node_lat (float): Latitud del nodo.
-        node_lon (float): Longitud del nodo.
-        radius (int): Radio en metros dentro del cual buscar los incidentes.
+        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
+        route (list): Ruta de nodos.
+        radius (int): Radio para buscar los incidentes cercanos.
 
     Returns:
-        float: Índice de peligrosidad de la ruta.
+        set: Un conjunto con los incidentes, el nodo más cercano de la ruta y la distancia.
     """
-    incidents = get_nearby_incidents(node_lat, node_lon, radius)
+    return {
+        incident
+        for node in route
+        for incident in node_incidents(
+            graph.nodes[node]["y"], graph.nodes[node]["x"], radius
+        )
+    }
 
+
+def incidents_distance(incidents, route, graph):
+    """
+    Para cada incidente, encuentra el nodo más cercano de la ruta y la distancia a él.
+
+    Args:
+        incidents (set): Lista de incidentes.
+        route (list): Ruta de nodos.
+        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
+
+    Returns:
+        tuple: Una tupla con los incidentes, el nodo más cercano de la ruta y la distancia.
+    """
+    incident_info = []
+
+    for incidente in incidents:
+        # Coordenadas del incidente
+        incident_lat = incidente.location.y
+        incident_lon = incidente.location.x
+
+        # Buscar el nodo más cercano en la ruta
+        nearest_node = None
+        min_distance = float("inf")
+
+        for node in route:
+            node_lat = graph.nodes[node]["y"]
+            node_lon = graph.nodes[node]["x"]
+
+            # Calcular la distancia entre el incidente y el nodo de la ruta
+            distance = geodesic(
+                (incident_lat, incident_lon), (node_lat, node_lon)
+            ).meters
+
+            if distance < min_distance:
+                min_distance = distance
+                nearest_node = node
+
+        # Añadir el incidente con su nodo más cercano de la ruta y distancia
+        incident_info.append((incidente, nearest_node, min_distance))
+
+    # Retornar como tupla
+    return tuple(incident_info)
+
+
+def weighted_average(values: tuple):
+    return float(average(values, weights=tuple(1 / d if d != 0 else 1 for d in values)))
+
+
+def route_risk(incidents, graph, route):
+    """
+    Calcula el riesgo total de todos los nodos de la ruta.
+
+    Args:
+        incidents (set): Lista de incidentes.
+        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
+        route (list): Ruta de nodos.
+
+    Returns:
+        float: Riesgo de la ruta.
+    """
     if not incidents:
         return 0.0  # No hay incidentes, ruta segura
 
-    # Calcular el número de incidentes y la gravedad promedio
+    distances = tuple(i[2] for i in incidents_distance(incidents, route, graph))
+
+    current_date = now().date()
+    times = tuple((current_date - i.incident_date).days for i in incidents)
+
     num_incidents = len(incidents)
     avg_gravity = sum([incidente.severity for incidente in incidents]) / num_incidents
+    risk_zone_distance = weighted_average(distances)
+    time = weighted_average(times)
 
-    # Calcular el riesgo usando la lógica difusa
-    risk = calculate_fuzzy_danger(num_incidents, avg_gravity)
-    return risk
+    return calculate_fuzzy_danger(num_incidents, avg_gravity, risk_zone_distance, time)
 
 
 def calculate_combined_cost(
     graph,
-    radius: int = config["risk_calculation"]["radius"],
     weight_security: int = config["risk_calculation"]["w_safety"],
 ):
     """
-    Asigna un costo combinado (seguridad y rapidez) a cada arista del grafo.
+    Asigna un costo combinado (seguridad y rapidez) a cada arista del grafo,
+    evaluando internamente el riesgo de la ruta en función de los incidentes cercanos.
 
     Args:
         graph (networkx.Graph): Grafo con información de nodos y aristas.
-        radius (int): Radio para considerar los incidentes cercanos.
         weight_security (int): Valor de importancia de la seguridad.
 
     Returns:
         networkx.Graph: Grafo con los costos combinados asignados.
     """
+    # Calcular el peso de la rapidez basado en el peso de seguridad
     weight_speed = 1 - weight_security
-    for u, v, data in graph.edges(data=True):
-        route_nodes = nx.shortest_path(graph, u, v, weight="combined_cost")
-        total_risk = 0
-        for node in route_nodes:
-            node_lat, node_lon = graph.nodes[node]["y"], graph.nodes[node]["x"]
-            total_risk += calculate_route_risk(node_lat, node_lon, radius)
 
-        avg_risk = total_risk / len(route_nodes)
+    # Recorrer todas las aristas del grafo
+    for u, v, data in graph.edges(data=True):
+        # Encontramos la ruta más corta entre u y v
+        route_nodes = nx.shortest_path(graph, u, v, weight="combined_cost")
+
+        # Obtener los incidentes que afectan la ruta utilizando route_incidents
+        incidents = route_incidents(graph, route_nodes)
+
+        # Calculamos el riesgo total de la ruta utilizando route_risk
+        route_risk_value = route_risk(incidents, graph, route_nodes)
+
+        # Obtenemos la distancia de la arista
         distance = data["length"]
 
+        # Calcular tiempo de viaje (suponemos una velocidad constante)
         speed = 50 / 3.6  # Velocidad en metros por segundo
         travel_time = distance / speed  # Tiempo de viaje en segundos
 
-        combined_cost = (avg_risk * weight_security) + (travel_time * weight_speed)
+        # Calcular el costo combinado: seguridad (según el riesgo de la ruta) + tiempo
+        combined_cost = (route_risk_value * weight_security) + (
+            travel_time * weight_speed
+        )
+
+        # Asignamos el costo combinado a la arista
         data["combined_cost"] = combined_cost
 
     return graph
