@@ -1,27 +1,20 @@
-# Usa una imagen oficial de Python como base
+# Imagen oficial de Python como base
 FROM python:3.11-slim
 
-# Establecer el directorio de trabajo
+# Directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias de sistema para PostGIS y otros requerimientos
+# Dependencias de sistema (PostGIS y otras)
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     postgis \
     libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar pipenv
-RUN pip install pipenv
+# Copia de dependencias de Python al contenedor
+COPY requirements.txt .
 
-COPY Pipfile* ./
-RUN pipenv install --dev
-COPY . .
-
-# Exponer el puerto en el que se ejecutará Django
-EXPOSE 8000
-
-# Comando por defecto para ejecutar el servidor de Django
-CMD ["pipenv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Instalación de dependencias de Python
+RUN pip install --no-cache-dir -r requirements.txt

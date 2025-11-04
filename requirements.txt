@@ -1,0 +1,10 @@
+django
+django-environ
+geopy
+networkx
+numpy
+osmnx
+psycopg
+pyyaml
+scipy
+scikit-fuzzy

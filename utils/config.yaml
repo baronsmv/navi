@@ -2,7 +2,7 @@
 
 risk_calculation:
   radius: 250  # Radio (en metros) para buscar incidentes alrededor del nodo
-  w_safety: 0.8  # Valor de prioridad de la seguridad (entre el 0 y el 1)
+  w_safety: 0.99  # Valor de prioridad de la seguridad (entre el 0 y el 1)
   gravedad_max: 5     # Valor máximo esperado de gravedad (para normalizar)
 
 incident_weights:

@@ -1,3 +1,4 @@
+import itertools
 import logging
 
 import networkx as nx
@@ -133,12 +134,99 @@ def route_risk(
     return calculate_fuzzy_danger(num_incidents, avg_gravity, risk_zone_distance, time)
 
 
+def calculate_route_cost(graph, route_nodes, weight_security, weight_speed):
+    """
+    Calcula el costo combinado de una ruta dada, considerando seguridad y rapidez.
+
+    Args:
+        graph (networkx.Graph): Grafo con los nodos y sus aristas.
+        route_nodes (list): Lista de nodos que forman la ruta.
+        weight_security (float): Peso para la seguridad (riesgo).
+        weight_speed (float): Peso para la rapidez (tiempo de viaje).
+
+    Returns:
+        float: Costo combinado de la ruta.
+    """
+    # Obtener los incidentes que afectan la ruta utilizando route_incidents
+    incidents = route_incidents(graph, route_nodes)
+    logger.info(f"Incidentes en la ruta {route_nodes}: {incidents}")
+
+    # Calcular el riesgo total de la ruta utilizando route_risk
+    route_risk_value = route_risk(incidents, graph, route_nodes)
+    logger.info(f"Valor del riesgo de la ruta {route_nodes}: {route_risk_value}")
+
+    # Calcular la distancia total de la ruta
+    total_distance = 0
+    for i in range(len(route_nodes) - 1):
+        u, v = route_nodes[i], route_nodes[i + 1]
+        edge_data = graph[u][v]  # Datos de la arista entre u y v
+
+        # Verificar si la arista tiene el atributo 'length'
+        if "length" not in edge_data:
+            logger.warning(f"Arista entre {u} y {v} NO tiene atributo 'length'.")
+            continue  # Omite la arista si no tiene 'length'
+
+        total_distance += edge_data["length"]  # Sumar la longitud de la arista
+
+    logger.info(f"Distancia total de la ruta {route_nodes}: {total_distance} metros")
+
+    # Calcular el tiempo de viaje para la ruta (suponiendo una velocidad constante)
+    speed = 50 / 3.6  # Velocidad en metros por segundo
+    travel_time = total_distance / speed  # Tiempo de viaje en segundos
+    logger.info(
+        f"Tiempo de viaje estimado para la ruta {route_nodes}: {travel_time} segundos"
+    )
+
+    # Calcular el costo combinado para esta ruta
+    combined_cost = (route_risk_value * weight_security) + (travel_time * weight_speed)
+    logger.info(
+        f"Costo combinado para la ruta {route_nodes}: {combined_cost} (seguridad: {route_risk_value * weight_security}, rapidez: {travel_time * weight_speed})"
+    )
+
+    return combined_cost
+
+
+def calculate_best_route_cost(graph, u, v, weight_security, weight_speed):
+    """
+    Calcula la mejor ruta entre dos nodos u y v, considerando el costo combinado
+    de seguridad y rapidez.
+
+    Args:
+        graph (networkx.Graph): Grafo con los nodos y sus aristas.
+        u (node): Nodo de origen.
+        v (node): Nodo de destino.
+        weight_security (float): Peso para la seguridad (riesgo).
+        weight_speed (float): Peso para la rapidez (tiempo de viaje).
+
+    Returns:
+        tuple: La mejor ruta y su costo combinado.
+    """
+    # Calcular el grafo con costos combinados
+    graph_with_combined_cost = graph.copy()
+
+    # Asignar el costo combinado a cada arista del grafo
+    for u, v, data in graph_with_combined_cost.edges(data=True):
+        # Aquí usamos el costo combinado ya calculado para la arista
+        data["combined_cost"] = calculate_route_cost(
+            graph, [u, v], weight_security, weight_speed
+        )
+
+    # Encontrar la mejor ruta entre u y v usando Dijkstra basado en el "combined_cost"
+    best_route = nx.dijkstra_path(
+        graph_with_combined_cost, source=u, target=v, weight="combined_cost"
+    )
+    best_combined_cost = nx.dijkstra_path_length(
+        graph_with_combined_cost, source=u, target=v, weight="combined_cost"
+    )
+
+    return best_route, best_combined_cost
+
+
 def calculate_combined_cost(
-    graph,
-    weight_security: int = config["risk_calculation"]["w_safety"],
+    graph, weight_security: int = config["risk_calculation"]["w_safety"]
 ):
     """
-    Asigna un costo combinado (seguridad y rapidez) a cada arista del grafo,
+    Asigna un costo combinado (seguridad y rapidez) a cada ruta de origen a destino,
     evaluando internamente el riesgo de la ruta en función de los incidentes cercanos.
 
     Args:
@@ -146,52 +234,36 @@ def calculate_combined_cost(
         weight_security (int): Valor de importancia de la seguridad.
 
     Returns:
-        networkx.Graph: Grafo con los costos combinados asignados.
+        tuple: Grafo con los costos combinados asignados a las rutas y un diccionario de mejores rutas.
     """
+    # Asegurarse de trabajar con una copia mutable del grafo
+    graph = graph.copy()
+
     # Calcular el peso de la rapidez basado en el peso de seguridad
     weight_speed = 1 - weight_security
 
-    # Recorrer todas las aristas del grafo
-    for u, v, data in graph.edges(data=True):
-        # Encontramos la ruta más corta entre u y v
-        route_nodes = nx.shortest_path(graph, u, v, weight="combined_cost")
+    # Diccionario para almacenar las mejores rutas entre nodos
+    best_routes = {}
 
-        # Obtener los incidentes que afectan la ruta utilizando route_incidents
-        incidents = route_incidents(graph, route_nodes)
-
-        # Calculamos el riesgo total de la ruta utilizando route_risk
-        route_risk_value = route_risk(incidents, graph, route_nodes)
-
-        # Obtenemos la distancia de la arista
-        distance = data["length"]
-
-        # Calcular tiempo de viaje (suponemos una velocidad constante)
-        speed = 50 / 3.6  # Velocidad en metros por segundo
-        travel_time = distance / speed  # Tiempo de viaje en segundos
-
-        # Calcular el costo combinado: seguridad (según el riesgo de la ruta) + tiempo
-        combined_cost = (route_risk_value * weight_security) + (
-            travel_time * weight_speed
+    # Recorrer todos los pares de nodos del grafo de forma más eficiente
+    for u, v in itertools.combinations(graph.nodes, 2):  # solo par de nodos
+        # Obtener la mejor ruta y su costo combinado entre u y v
+        best_route, best_combined_cost = calculate_best_route_cost(
+            graph, u, v, weight_security, weight_speed
         )
 
-        # Asignamos el costo combinado a la arista
-        data["combined_cost"] = combined_cost
+        if best_route:
+            # Asegurarnos de que el grafo sea mutable (esto garantiza que podemos asignar valores)
+            for i in range(len(best_route) - 1):
+                # Asignamos el costo combinado a cada arista de la mejor ruta
+                graph[best_route[i]][best_route[i + 1]][
+                    "combined_cost"
+                ] = best_combined_cost
 
-    return graph
+            # Almacenamos la mejor ruta y su costo combinado
+            best_routes[(u, v)] = {
+                "route": best_route,
+                "combined_cost": best_combined_cost,
+            }
 
-
-def find_optimal_route(graph, origin_node, dest_node):
-    """
-    Encuentra la ruta más corta basada en el costo combinado de seguridad y rapidez.
-
-    Args:
-        graph (networkx.Graph): Grafo con los costos combinados.
-        origin_node (int): Nodo de origen.
-        dest_node (int): Nodo de destino.
-
-    Returns:
-        list: Ruta más corta (lista de nodos).
-    """
-    # Calcular la ruta más corta según el costo combinado
-    route = nx.shortest_path(graph, origin_node, dest_node, weight="combined_cost")
-    return route
+    return graph, best_routes
