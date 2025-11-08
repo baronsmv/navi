@@ -1,5 +1,6 @@
 import itertools
 import logging
+from typing import List, Set, Tuple
 
 import networkx as nx
 from django.contrib.gis.geos import Point
@@ -15,36 +16,40 @@ from utils.config_loader import config
 logger = logging.getLogger(__name__)
 
 
-def node_incidents(node_lat, node_lon, radius=config["risk_calculation"]["radius"]):
+def node_incidents(
+    node_lat: float, node_lon: float, radius: int = config["risk_calculation"]["radius"]
+) -> Tuple[Incident, ...]:
     """
-    Obtiene los incidentes cercanos a un nodo en el grafo dentro de un radio especificado.
+    Busca incidentes cercanos a un nodo geográfico dentro de un radio dado.
 
     Args:
         node_lat (float): Latitud del nodo.
         node_lon (float): Longitud del nodo.
-        radius (int): Radio en metros dentro del cual buscar los incidentes.
+        radius (int): Radio en metros para buscar incidentes.
 
     Returns:
-        tuple: Lista de incidentes cercanos.
+        Tupla de incidentes encontrados.
     """
-    node_point = Point(node_lon, node_lat, srid=4326)
+    node_point = Point(node_lon, node_lat, srid=4326)  # Crear punto geográfico
     incidents = Incident.objects.filter(
-        location__distance_lte=(node_point, D(m=radius))
+        location__distance_lte=(node_point, D(m=radius))  # Buscar incidentes cercanos
     )
     return tuple(incidents)
 
 
-def route_incidents(graph, route, radius=config["risk_calculation"]["radius"]):
+def route_incidents(
+    graph: nx.Graph, route: List, radius: int = config["risk_calculation"]["radius"]
+) -> Set[Incident]:
     """
     Recolecta todos los incidentes de los nodos en la ruta.
 
     Args:
-        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
-        route (list): Ruta de nodos.
-        radius (int): Radio para buscar los incidentes cercanos.
+        graph: Grafo con los nodos y sus coordenadas.
+        route: Ruta de nodos.
+        radius: Radio para buscar los incidentes cercanos.
 
     Returns:
-        set: Un conjunto con los incidentes, el nodo más cercano de la ruta y la distancia.
+        Conjunto de incidentes únicos cercanos a la ruta.
     """
     return {
         incident
@@ -55,17 +60,19 @@ def route_incidents(graph, route, radius=config["risk_calculation"]["radius"]):
     }
 
 
-def incidents_distance(incidents, route, graph):
+def incidents_distance(
+    incidents: Set[Incident], route: list, graph: nx.Graph
+) -> Tuple[Tuple[Incident, int, float], ...]:
     """
     Para cada incidente, encuentra el nodo más cercano de la ruta y la distancia a él.
 
     Args:
-        incidents (set): Lista de incidentes.
-        route (list): Ruta de nodos.
-        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
+        incidents: Lista de incidentes.
+        route: Ruta de nodos.
+        graph: Grafo con los nodos y sus coordenadas.
 
     Returns:
-        tuple: Una tupla con los incidentes, el nodo más cercano de la ruta y la distancia.
+        Tupla de (incidente, nodo más cercano, distancia en metros).
     """
     incident_info = []
 
@@ -98,25 +105,27 @@ def incidents_distance(incidents, route, graph):
     return tuple(incident_info)
 
 
-def weighted_average(values: tuple):
+def weighted_average(values: Tuple[float, ...]) -> float:
+    """
+    Calcula el promedio ponderado, donde los valores más cercanos tienen más peso.
+
+    Returns:
+        Promedio ponderado.
+    """
     return float(average(values, weights=tuple(1 / d if d != 0 else 1 for d in values)))
 
 
-def route_risk(
-    incidents,
-    graph,
-    route,
-):
+def route_risk(incidents: Set[Incident], graph: nx.Graph, route: list) -> float:
     """
-    Calcula el riesgo total de todos los nodos de la ruta.
+    Calcula el riesgo total de una ruta basado en incidentes cercanos.
 
     Args:
-        incidents (set): Lista de incidentes.
-        graph (networkx.Graph): Grafo con los nodos y sus coordenadas.
-        route (list): Ruta de nodos.
+        incidents: Lista de incidentes.
+        graph: Grafo con los nodos y sus coordenadas.
+        route: Ruta de nodos.
 
     Returns:
-        float: Riesgo de la ruta.
+        Valor de riesgo calculado.
     """
     if not incidents:
         return 0.0  # No hay incidentes, ruta segura
@@ -134,18 +143,20 @@ def route_risk(
     return calculate_fuzzy_danger(num_incidents, avg_gravity, risk_zone_distance, time)
 
 
-def calculate_route_cost(graph, route_nodes, weight_security, weight_speed):
+def calculate_route_cost(
+    graph: nx.Graph, route_nodes: list, weight_security: float, weight_speed: float
+) -> float:
     """
     Calcula el costo combinado de una ruta dada, considerando seguridad y rapidez.
 
     Args:
-        graph (networkx.Graph): Grafo con los nodos y sus aristas.
-        route_nodes (list): Lista de nodos que forman la ruta.
-        weight_security (float): Peso para la seguridad (riesgo).
-        weight_speed (float): Peso para la rapidez (tiempo de viaje).
+        graph: Grafo con los nodos y sus aristas.
+        route_nodes: Lista de nodos que forman la ruta.
+        weight_security: Peso para la seguridad (riesgo).
+        weight_speed: Peso para la rapidez (tiempo de viaje).
 
     Returns:
-        float: Costo combinado de la ruta.
+        Costo combinado de la ruta.
     """
     # Obtener los incidentes que afectan la ruta utilizando route_incidents
     incidents = route_incidents(graph, route_nodes)
@@ -186,20 +197,21 @@ def calculate_route_cost(graph, route_nodes, weight_security, weight_speed):
     return combined_cost
 
 
-def calculate_best_route_cost(graph, u, v, weight_security, weight_speed):
+def calculate_best_route_cost(
+    graph: nx.Graph, u: int, v: int, weight_security: float, weight_speed: float
+) -> Tuple[List, float]:
     """
-    Calcula la mejor ruta entre dos nodos u y v, considerando el costo combinado
-    de seguridad y rapidez.
+    Encuentra la mejor ruta entre dos nodos según el costo combinado.
 
     Args:
-        graph (networkx.Graph): Grafo con los nodos y sus aristas.
-        u (node): Nodo de origen.
-        v (node): Nodo de destino.
-        weight_security (float): Peso para la seguridad (riesgo).
-        weight_speed (float): Peso para la rapidez (tiempo de viaje).
+        graph: Grafo con los nodos y sus aristas.
+        u: Nodo de origen.
+        v: Nodo de destino.
+        weight_security: Peso para la seguridad (riesgo).
+        weight_speed: Peso para la rapidez (tiempo de viaje).
 
     Returns:
-        tuple: La mejor ruta y su costo combinado.
+        Ruta óptima y su costo.
     """
     # Calcular el grafo con costos combinados
     graph_with_combined_cost = graph.copy()
@@ -223,18 +235,17 @@ def calculate_best_route_cost(graph, u, v, weight_security, weight_speed):
 
 
 def calculate_combined_cost(
-    graph, weight_security: int = config["risk_calculation"]["w_safety"]
-):
+    graph: nx.Graph, weight_security: int = config["risk_calculation"]["w_safety"]
+) -> Tuple[nx.Graph, dict]:
     """
-    Asigna un costo combinado (seguridad y rapidez) a cada ruta de origen a destino,
-    evaluando internamente el riesgo de la ruta en función de los incidentes cercanos.
+    Asigna costos combinados a todas las rutas posibles en el grafo.
 
     Args:
-        graph (networkx.Graph): Grafo con información de nodos y aristas.
-        weight_security (int): Valor de importancia de la seguridad.
+        graph: Grafo con información de nodos y aristas.
+        weight_security: Valor de importancia de la seguridad.
 
     Returns:
-        tuple: Grafo con los costos combinados asignados a las rutas y un diccionario de mejores rutas.
+        Grafo actualizado y rutas óptimas.
     """
     # Asegurarse de trabajar con una copia mutable del grafo
     graph = graph.copy()
@@ -256,7 +267,7 @@ def calculate_combined_cost(
             # Asegurarnos de que el grafo sea mutable (esto garantiza que podemos asignar valores)
             for i in range(len(best_route) - 1):
                 # Asignamos el costo combinado a cada arista de la mejor ruta
-                graph[best_route[i]][best_route[i + 1]][
+                graph.edges[best_route[i], best_route[i + 1]][
                     "combined_cost"
                 ] = best_combined_cost
 

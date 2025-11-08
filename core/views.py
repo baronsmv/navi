@@ -1,35 +1,34 @@
 # core.views.py
 
-import json
 import logging
 
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 
-from core.forms import IncidentForm
-from core.logic.route_danger import (
+from utils import serialize
+from .forms import IncidentForm
+from .logic.route_danger import (
     calculate_combined_cost,
     route_risk,
     route_incidents,
 )
-from core.logic.route_utils import (
+from .logic.route_utils import (
     extract_route_coords,
     get_route,
     get_graph,
     parse_coordinates,
 )
-from core.models import Incident
 
 logger = logging.getLogger(__name__)
 
 
-def home(request):
+def home(request: HttpRequest) -> HttpResponse:
     return render(request, "mapa.html")
 
 
-def add_incident(request):
+def add_incident(request: HttpRequest) -> HttpResponse:
     form = IncidentForm()
     if request.method == "POST":
         form = IncidentForm(request.POST)
@@ -44,40 +43,16 @@ def add_incident(request):
     return render(request, "incident_form.html", {"form": form})
 
 
-def serialize_incidents(incidents=None, json_dump=True):
-    incidents = (
-        Incident.objects.exclude(latitude=0, longitude=0)
-        if incidents is None
-        else incidents
-    )
-    incidents_data = [
-        {
-            "lat": i.latitude,
-            "lon": i.longitude,
-            "severity": i.severity,
-            "type": i.get_type_display(),
-            "date": str(i.incident_date),
-            "description": i.description or "Sin descripción",
-        }
-        for i in incidents
-    ]
-    logger.info(f"Serializando la información de incidentes:\n{incidents_data}")
-    return {
-        "incidents": incidents,
-        "incidents_json": json.dumps(incidents_data) if json_dump else incidents_data,
-    }
-
-
-def incident_list(request):
+def incident_list(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "incident_list.html",
-        serialize_incidents(),
+        serialize.incidents(),
     )
 
 
 @csrf_exempt
-def calculate_route(request):
+def calculate_route(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
@@ -109,7 +84,7 @@ def calculate_route(request):
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
-                "incidents": serialize_incidents(incidents, False)["incidents_json"],
+                "incidents": serialize.incidents(incidents, False)["incidents_json"],
             }
         )
 

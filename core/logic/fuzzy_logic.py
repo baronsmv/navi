@@ -15,13 +15,13 @@ def create_fuzzy_variable(
     Crea una variable difusa con funciones de pertenencia.
 
     Args:
-        name (str): Nombre de la variable.
-        universe (ndarray): Rango de valores posibles (universo de discurso).
-        membership (dict): Diccionario con funciones de pertenencia.
-        is_consequent (bool): Es consecuente o, en su defecto, antecedente.
+        name: Nombre de la variable.
+        universe: Rango de valores posibles (universo de discurso).
+        membership: Diccionario con funciones de pertenencia.
+        is_consequent: Es consecuente o, en su defecto, antecedente.
 
     Returns:
-        ctrl.Antecedent | ctrl.Consequent: Variable difusa configurada.
+        Variable difusa configurada.
     """
     variable = (
         ctrl.Consequent(universe, name)
@@ -36,12 +36,12 @@ def create_fuzzy_variable(
     return variable
 
 
-def build_fuzzy_system(plot: bool = False) -> ctrl.ControlSystem:
+def build_fuzzy_system() -> ctrl.ControlSystem:
     """
     Crea el sistema difuso para evaluar la peligrosidad de una ruta.
 
     Returns:
-        ctrl.ControlSystem: Sistema difuso.
+        Sistema difuso.
     """
     # Universos de valores
     incidents_universe = arange(0, 51, 1)  # Número de incidentes cercanos
@@ -187,7 +187,7 @@ def build_fuzzy_system(plot: bool = False) -> ctrl.ControlSystem:
     return ctrl.ControlSystem(rules)
 
 
-fuzzy_system = build_fuzzy_system(plot=True)
+fuzzy_system = build_fuzzy_system()
 
 
 def calculate_fuzzy_danger(
@@ -200,13 +200,13 @@ def calculate_fuzzy_danger(
     Evalúa el nivel de peligro de una ruta usando lógica difusa.
 
     Args:
-        num_incidents (int): Número de incidentes cercanos.
-        avg_gravity (float): Gravedad promedio de los incidentes.
-        risk_zone_distance (float): Distancia a la zona de riesgo en metros.
-        time (int): Días que han pasado desde el incidente.
+        num_incidents: Número de incidentes cercanos.
+        avg_gravity: Gravedad promedio de los incidentes.
+        risk_zone_distance: Distancia a la zona de riesgo en metros.
+        time: Días que han pasado desde el incidente.
 
     Returns:
-        float: Índice difuso de peligrosidad entre 0 y 1.
+        Índice difuso de peligrosidad entre 0 y 1.
     """
     if num_incidents <= 0 and avg_gravity <= 0:
         return 0.0

@@ -1,5 +1,7 @@
 import logging
+from typing import Dict, List, Tuple
 
+import networkx as nx
 import osmnx as ox
 from geopy.distance import geodesic
 
@@ -8,7 +10,19 @@ from core.logic.route_danger import calculate_best_route_cost
 logger = logging.getLogger(__name__)
 
 
-def parse_coordinates(post_data):
+def parse_coordinates(post_data: Dict[str, str]) -> Tuple[float, float, float, float]:
+    """
+    Extrae y convierte las coordenadas de origen y destino desde un diccionario de datos POST.
+
+    Args:
+        post_data: Diccionario con claves de origen y destino.
+
+    Returns:
+        Coordenadas (latitud y longitud) de origen y destino.
+
+    Raises:
+        ValueError: Si faltan claves o los valores no son convertibles a float.
+    """
     try:
         origin_lat = float(post_data["origin_lat"])
         origin_lon = float(post_data["origin_lon"])
@@ -19,15 +33,15 @@ def parse_coordinates(post_data):
         raise ValueError("Parámetros inválidos o faltantes") from e
 
 
-def get_graph(origin, destination):
+def get_graph(
+    origin: Tuple[float, float], destination: Tuple[float, float]
+) -> nx.Graph:
     """
-    Obtiene un grafo de OpenStreetMap alrededor de un área centrada en el punto medio
-    entre las coordenadas de origen y destino, y añade el atributo 'length' a las aristas
-    para calcular distancias entre nodos.
+    Genera un grafo de calles desde OpenStreetMap centrado entre dos puntos y añade distancias a las aristas.
 
     Args:
-        origin (tuple): Coordenadas del punto de origen (latitud, longitud).
-        destination (tuple): Coordenadas del punto de destino (latitud, longitud).
+        origin: Coordenadas del punto de origen (latitud, longitud).
+        destination: Coordenadas del punto de destino (latitud, longitud).
 
     Returns:
         networkx.Graph: Grafo generado de OpenStreetMap con el atributo 'length' agregado a las aristas.
@@ -73,7 +87,26 @@ def get_graph(origin, destination):
     return graph
 
 
-def get_route(graph, graph_with_cost, origin, destination, weight_security=0.5):
+def get_route(
+    graph: nx.Graph,
+    graph_with_cost: nx.Graph,
+    origin: Tuple[float, float],
+    destination: Tuple[float, float],
+    weight_security: float = 0.5,
+) -> Tuple[List[int], int, int]:
+    """
+    Encuentra la mejor ruta entre dos coordenadas usando un grafo con costos combinados.
+
+    Args:
+        graph: Grafo base con nodos y coordenadas.
+        graph_with_cost: Grafo con costos combinados en las aristas.
+        origin: Coordenadas del punto de origen.
+        destination: Coordenadas del punto de destino.
+        weight_security: Peso relativo de la seguridad (0 a 1).
+
+    Returns:
+        Ruta óptima (lista de nodos), nodo origen y nodo destino.
+    """
     # Obtener los nodos más cercanos a las coordenadas de origen y destino
     origin_node = ox.distance.nearest_nodes(graph, origin[1], origin[0])
     dest_node = ox.distance.nearest_nodes(graph, destination[1], destination[0])
@@ -90,5 +123,17 @@ def get_route(graph, graph_with_cost, origin, destination, weight_security=0.5):
     return best_route, origin_node, dest_node
 
 
-def extract_route_coords(graph, route):
+def extract_route_coords(
+    graph: nx.Graph, route: List[int]
+) -> List[Tuple[float, float]]:
+    """
+    Extrae las coordenadas geográficas de los nodos en una ruta.
+
+    Args:
+        graph: Grafo con coordenadas en los nodos.
+        route: Lista de nodos que forman la ruta.
+
+    Returns:
+        Lista de coordenadas (latitud, longitud) de la ruta.
+    """
     return [(graph.nodes[node]["y"], graph.nodes[node]["x"]) for node in route]
