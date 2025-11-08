@@ -64,12 +64,17 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
         logger.info(f"Origen: {origin}, Destino: {destination}")
 
         graph = get_graph(origin, destination)
-        graph_with_cost = calculate_combined_cost(graph)
+        graph_with_cost, best_routes = calculate_combined_cost(graph)
 
         route, origin_node, dest_node = get_route(
             graph, graph_with_cost, origin, destination
         )
-        logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {route}")
+        if not route:
+            messages.warning(
+                request, "No se encontró una ruta óptima, se devolverá una ruta vacía."
+            )
+        else:
+            logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {route}")
 
         route_coords = extract_route_coords(graph, route)
         logger.info(f"Coordenadas de la ruta: {route_coords}")
@@ -90,6 +95,7 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
 
     except ValueError as e:
         logger.warning(f"Error de validación: {e}")
+        raise
         return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Ocurrió un error: {e}", exc_info=True)

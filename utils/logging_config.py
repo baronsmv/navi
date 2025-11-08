@@ -18,7 +18,7 @@ def setup_logging():
 
     # Formatter y asociación al handler
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
     )
     console_handler.setFormatter(formatter)
 

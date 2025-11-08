@@ -38,7 +38,9 @@ def node_incidents(
 
 
 def route_incidents(
-    graph: nx.Graph, route: List, radius: int = config["risk_calculation"]["radius"]
+    graph: nx.MultiDiGraph,
+    route: List,
+    radius: int = config["risk_calculation"]["radius"],
 ) -> Set[Incident]:
     """
     Recolecta todos los incidentes de los nodos en la ruta.
@@ -61,7 +63,7 @@ def route_incidents(
 
 
 def incidents_distance(
-    incidents: Set[Incident], route: list, graph: nx.Graph
+    incidents: Set[Incident], route: list, graph: nx.MultiDiGraph
 ) -> Tuple[Tuple[Incident, int, float], ...]:
     """
     Para cada incidente, encuentra el nodo más cercano de la ruta y la distancia a él.
@@ -115,7 +117,7 @@ def weighted_average(values: Tuple[float, ...]) -> float:
     return float(average(values, weights=tuple(1 / d if d != 0 else 1 for d in values)))
 
 
-def route_risk(incidents: Set[Incident], graph: nx.Graph, route: list) -> float:
+def route_risk(incidents: Set[Incident], graph: nx.MultiDiGraph, route: list) -> float:
     """
     Calcula el riesgo total de una ruta basado en incidentes cercanos.
 
@@ -144,7 +146,10 @@ def route_risk(incidents: Set[Incident], graph: nx.Graph, route: list) -> float:
 
 
 def calculate_route_cost(
-    graph: nx.Graph, route_nodes: list, weight_security: float, weight_speed: float
+    graph: nx.MultiDiGraph,
+    route_nodes: list,
+    weight_security: float,
+    weight_speed: float,
 ) -> float:
     """
     Calcula el costo combinado de una ruta dada, considerando seguridad y rapidez.
@@ -170,14 +175,18 @@ def calculate_route_cost(
     total_distance = 0
     for i in range(len(route_nodes) - 1):
         u, v = route_nodes[i], route_nodes[i + 1]
-        edge_data = graph[u][v]  # Datos de la arista entre u y v
 
-        # Verificar si la arista tiene el atributo 'length'
-        if "length" not in edge_data:
-            logger.warning(f"Arista entre {u} y {v} NO tiene atributo 'length'.")
-            continue  # Omite la arista si no tiene 'length'
+        # Elegir la arista con menor longitud entre u y v
+        min_length = float("inf")
+        for k, data in graph[u][v].items():
+            if "length" not in data:
+                logger.warning(
+                    f"Arista entre {u} y {v} con clave {k} NO tiene atributo 'length'."
+                )
+                data["length"] = 1.0  # Valor mínimo por defecto
+            min_length = min(min_length, data["length"])
 
-        total_distance += edge_data["length"]  # Sumar la longitud de la arista
+        total_distance += min_length  # Sumar la longitud de la arista
 
     logger.info(f"Distancia total de la ruta {route_nodes}: {total_distance} metros")
 
@@ -198,7 +207,7 @@ def calculate_route_cost(
 
 
 def calculate_best_route_cost(
-    graph: nx.Graph, u: int, v: int, weight_security: float, weight_speed: float
+    graph: nx.MultiDiGraph, u: int, v: int, weight_security: float, weight_speed: float
 ) -> Tuple[List, float]:
     """
     Encuentra la mejor ruta entre dos nodos según el costo combinado.
@@ -217,7 +226,7 @@ def calculate_best_route_cost(
     graph_with_combined_cost = graph.copy()
 
     # Asignar el costo combinado a cada arista del grafo
-    for u, v, data in graph_with_combined_cost.edges(data=True):
+    for u, v, k, data in graph_with_combined_cost.edges(keys=True, data=True):
         # Aquí usamos el costo combinado ya calculado para la arista
         data["combined_cost"] = calculate_route_cost(
             graph, [u, v], weight_security, weight_speed
@@ -235,8 +244,9 @@ def calculate_best_route_cost(
 
 
 def calculate_combined_cost(
-    graph: nx.Graph, weight_security: int = config["risk_calculation"]["w_safety"]
-) -> Tuple[nx.Graph, dict]:
+    graph: nx.MultiDiGraph,
+    weight_security: int = config["risk_calculation"]["w_safety"],
+) -> Tuple[nx.MultiDiGraph, dict]:
     """
     Asigna costos combinados a todas las rutas posibles en el grafo.
 
@@ -267,9 +277,10 @@ def calculate_combined_cost(
             # Asegurarnos de que el grafo sea mutable (esto garantiza que podemos asignar valores)
             for i in range(len(best_route) - 1):
                 # Asignamos el costo combinado a cada arista de la mejor ruta
-                graph.edges[best_route[i], best_route[i + 1]][
-                    "combined_cost"
-                ] = best_combined_cost
+                for k in graph[best_route[i]][best_route[i + 1]]:
+                    graph.edges[best_route[i], best_route[i + 1], k][
+                        "combined_cost"
+                    ] = best_combined_cost
 
             # Almacenamos la mejor ruta y su costo combinado
             best_routes[(u, v)] = {

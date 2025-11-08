@@ -35,7 +35,7 @@ def parse_coordinates(post_data: Dict[str, str]) -> Tuple[float, float, float, f
 
 def get_graph(
     origin: Tuple[float, float], destination: Tuple[float, float]
-) -> nx.Graph:
+) -> nx.MultiDiGraph:
     """
     Genera un grafo de calles desde OpenStreetMap centrado entre dos puntos y añade distancias a las aristas.
 
@@ -44,7 +44,7 @@ def get_graph(
         destination: Coordenadas del punto de destino (latitud, longitud).
 
     Returns:
-        networkx.Graph: Grafo generado de OpenStreetMap con el atributo 'length' agregado a las aristas.
+        Grafo generado de OpenStreetMap con el atributo 'length' agregado a las aristas.
 
     Notes:
         - La función calcula el centro geográfico entre el origen y el destino y obtiene el grafo
@@ -64,32 +64,32 @@ def get_graph(
     graph = ox.graph_from_point((mid_lat, mid_lon), dist=radius_m, network_type="all")
 
     # Calcular y agregar el atributo 'length' a las aristas
-    for u, v, data in graph.edges(data=True):
-        # Verificar si los nodos tienen las coordenadas 'x' y 'y'
-        if u not in graph.nodes or v not in graph.nodes:
-            continue  # Si un nodo no tiene coordenadas, omitir esta arista
+    for u, v, k, data in graph.edges(keys=True, data=True):
+        try:
+            # Obtener las coordenadas de los nodos u y v
+            u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
+            v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
 
-        # Obtener las coordenadas de los nodos u y v
-        u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
-        v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
-
-        # Calcular la distancia entre los nodos u y v (en metros)
-        length = geodesic((u_lat, u_lon), (v_lat, v_lon)).meters
-
-        # Asignar el valor de la longitud de la arista
-        data["length"] = length
+            # Calcular la distancia entre los nodos u y v (en metros)
+            data["length"] = geodesic((u_lat, u_lon), (v_lat, v_lon)).meters
+        except KeyError:
+            data["length"] = (
+                1.0  # Valor mínimo por defecto si la arista no tiene longitud
+            )
 
     # Verificar que todas las aristas tienen la longitud
-    for u, v, data in graph.edges(data=True):
+    for u, v, k, data in graph.edges(keys=True, data=True):
         if "length" not in data:
-            print(f"Arista de {u} a {v} NO tiene atributo 'length'")
+            logger.warning(
+                f"Arista de {u} a {v} con clave {k} NO tiene atributo 'length'"
+            )
 
     return graph
 
 
 def get_route(
-    graph: nx.Graph,
-    graph_with_cost: nx.Graph,
+    graph: nx.MultiDiGraph,
+    graph_with_cost: nx.MultiDiGraph,
     origin: Tuple[float, float],
     destination: Tuple[float, float],
     weight_security: float = 0.5,
@@ -120,11 +120,15 @@ def get_route(
         weight_speed=1 - weight_security,
     )
 
+    if not best_route:
+        logger.warning("No se encontró una ruta óptima, devolviendo ruta vacía.")
+        return [], origin_node, dest_node
+
     return best_route, origin_node, dest_node
 
 
 def extract_route_coords(
-    graph: nx.Graph, route: List[int]
+    graph: nx.MultiDiGraph, route: List[int]
 ) -> List[Tuple[float, float]]:
     """
     Extrae las coordenadas geográficas de los nodos en una ruta.
@@ -136,4 +140,8 @@ def extract_route_coords(
     Returns:
         Lista de coordenadas (latitud, longitud) de la ruta.
     """
-    return [(graph.nodes[node]["y"], graph.nodes[node]["x"]) for node in route]
+    return [
+        (graph.nodes[node]["y"], graph.nodes[node]["x"])
+        for node in route
+        if "x" in graph.nodes[node] and "y" in graph.nodes[node]
+    ]
