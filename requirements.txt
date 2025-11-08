@@ -1,6 +1,7 @@
 django
 django-environ
 geopy
+gunicorn
 networkx
 numpy
 osmnx
