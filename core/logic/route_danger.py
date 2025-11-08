@@ -3,7 +3,7 @@ import logging
 from typing import List, Set, Tuple
 
 import networkx as nx
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import MultiPoint, Point
 from django.contrib.gis.measure import D
 from django.utils.timezone import now
 from geopy.distance import geodesic
@@ -43,7 +43,7 @@ def route_incidents(
     radius: int = config["risk_calculation"]["radius"],
 ) -> Set[Incident]:
     """
-    Recolecta todos los incidentes de los nodos en la ruta.
+    Recolecta todos los incidentes cercanos a los nodos de la ruta.
 
     Args:
         graph: Grafo con los nodos y sus coordenadas.
@@ -53,13 +53,23 @@ def route_incidents(
     Returns:
         Conjunto de incidentes únicos cercanos a la ruta.
     """
-    return {
-        incident
+    points = tuple(
+        Point(graph.nodes[node]["x"], graph.nodes[node]["y"], srid=4326)
         for node in route
-        for incident in node_incidents(
-            graph.nodes[node]["y"], graph.nodes[node]["x"], radius
-        )
-    }
+        if "x" in graph.nodes[node] and "y" in graph.nodes[node]
+    )
+
+    if not points:
+        return set()
+
+    multi_point = MultiPoint(points)
+
+    # Realizar una sola consulta espacial para obtener todos los incidentes cercanos
+    incidents = Incident.objects.filter(
+        location__distance_lte=(multi_point, D(m=radius))
+    )
+
+    return set(incidents)
 
 
 def incidents_distance(
@@ -76,34 +86,29 @@ def incidents_distance(
     Returns:
         Tupla de (incidente, nodo más cercano, distancia en metros).
     """
+    node_coords = {
+        node: (graph.nodes[node]["y"], graph.nodes[node]["x"])
+        for node in route
+        if "x" in graph.nodes[node] and "y" in graph.nodes[node]
+    }
+
     incident_info = []
 
-    for incidente in incidents:
-        # Coordenadas del incidente
-        incident_lat = incidente.location.y
-        incident_lon = incidente.location.x
+    for incident in incidents:
+        incident_coord = (incident.location.y, incident.location.x)
 
-        # Buscar el nodo más cercano en la ruta
+        # Buscar el nodo más cercano
         nearest_node = None
         min_distance = float("inf")
 
-        for node in route:
-            node_lat = graph.nodes[node]["y"]
-            node_lon = graph.nodes[node]["x"]
-
-            # Calcular la distancia entre el incidente y el nodo de la ruta
-            distance = geodesic(
-                (incident_lat, incident_lon), (node_lat, node_lon)
-            ).meters
-
+        for node, coord in node_coords.items():
+            distance = geodesic(incident_coord, coord).meters
             if distance < min_distance:
                 min_distance = distance
                 nearest_node = node
 
-        # Añadir el incidente con su nodo más cercano de la ruta y distancia
-        incident_info.append((incidente, nearest_node, min_distance))
+        incident_info.append((incident, nearest_node, min_distance))
 
-    # Retornar como tupla
     return tuple(incident_info)
 
 

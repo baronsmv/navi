@@ -10,7 +10,6 @@ from django.views.decorators.csrf import csrf_exempt
 from utils import serialize
 from .forms import IncidentForm
 from .logic.route_danger import (
-    calculate_combined_cost,
     route_risk,
     route_incidents,
 )
@@ -64,21 +63,34 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
         logger.info(f"Origen: {origin}, Destino: {destination}")
 
         graph = get_graph(origin, destination)
-        graph_with_cost, best_routes = calculate_combined_cost(graph)
 
-        route, origin_node, dest_node = get_route(
-            graph, graph_with_cost, origin, destination
-        )
-        if not route:
-            messages.warning(
-                request, "No se encontró una ruta óptima, se devolverá una ruta vacía."
+        # Validar que el grafo tenga nodos y aristas
+        if graph.number_of_nodes() == 0 or graph.number_of_edges() == 0:
+            logger.error("El grafo generado está vacío.")
+            return JsonResponse(
+                {"error": "No se pudo generar el grafo de navegación."}, status=500
             )
-        else:
-            logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {route}")
+
+        # Obtener la mejor ruta
+        route, origin_node, dest_node = get_route(graph, graph, origin, destination)
+
+        if not route:
+            logger.warning("No se encontró una ruta óptima.")
+            return JsonResponse(
+                {
+                    "route": [],
+                    "dangerLevel": 0.0,
+                    "incidents": [],
+                    "message": "No se encontró una ruta óptima.",
+                }
+            )
+
+        logger.info(f"Ruta óptima de {origin_node} a {dest_node}: {route}")
 
         route_coords = extract_route_coords(graph, route)
         logger.info(f"Coordenadas de la ruta: {route_coords}")
 
+        # Solo calcular peligrosidad si la ruta es válida
         incidents = route_incidents(graph, route)
         logger.info(f"Incidentes de la ruta: {incidents}")
 
@@ -95,8 +107,8 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
 
     except ValueError as e:
         logger.warning(f"Error de validación: {e}")
-        raise
         return JsonResponse({"error": str(e)}, status=400)
+
     except Exception as e:
-        logger.error(f"Ocurrió un error: {e}", exc_info=True)
+        logger.error(f"Ocurrió un error inesperado: {e}", exc_info=True)
         return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)

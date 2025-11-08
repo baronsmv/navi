@@ -31,7 +31,9 @@ class Incident(models.Model):
     latitude = models.FloatField(default=0.0)
     longitude = models.FloatField(default=0.0)
 
-    location = models.PointField(geography=True, srid=4326, default=Point(0.0, 0.0))
+    location = models.PointField(
+        geography=True, srid=4326, default=Point(0.0, 0.0), spatial_index=True
+    )
 
     severity = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])  # 1 to 5
 

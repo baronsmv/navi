@@ -7,5 +7,6 @@ numpy
 osmnx
 psycopg
 pyyaml
+scikit-learn
 scipy
 scikit-fuzzy

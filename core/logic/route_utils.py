@@ -54,8 +54,8 @@ def get_graph(
     """
     # Calcular la distancia en kilómetros entre origen y destino
     distance_km = geodesic(origin, destination).km
-    # Limitar el radio a 70 km como máximo
-    radius_m = min(distance_km, 70) * 1000  # Convertir a metros
+    # Limitar el radio a 5 km como máximo
+    radius_m = min(distance_km, 5) * 1000  # Convertir a metros
     # Calcular las coordenadas medias (centro geográfico) entre origen y destino
     mid_lat = (origin[0] + destination[0]) / 2
     mid_lon = (origin[1] + destination[1]) / 2
