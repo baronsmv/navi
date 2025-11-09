@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo "[START] Precargando grafos..."
+python scripts/prebuild_graphs.py
+
 echo "[START] Copiando archivos estáticos al servidor..."
 python manage.py collectstatic --noinput
 

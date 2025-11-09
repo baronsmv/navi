@@ -5,6 +5,7 @@ services:
     volumes:
       - .:/app
       - static_volume:/app/static
+      - graph_cache:/app/data/graphs
     env_file:
       - .env
     depends_on:
@@ -32,3 +33,4 @@ services:
 volumes:
   postgres_data:
   static_volume:
+  graph_cache:

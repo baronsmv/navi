@@ -2,7 +2,6 @@ import logging
 from typing import Tuple, Dict
 
 import networkx as nx
-import osmnx as ox
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import D
 from django.db.models import QuerySet
@@ -35,6 +34,9 @@ def estimate_radius(
 def parse_coordinates(
     post_data: Dict[str, str],
 ) -> Tuple[float, float, float, float]:
+    """
+    Extrae y valida coordenadas del cuerpo POST.
+    """
     try:
         return (
             float(post_data["origin_lat"]),
@@ -44,65 +46,6 @@ def parse_coordinates(
         )
     except (KeyError, ValueError) as e:
         raise ValueError("Parámetros inválidos o faltantes") from e
-
-
-def build_graph_with_risk(
-    origin: Tuple[float, float],
-    destination: Tuple[float, float],
-    radius_m: int = 10000,
-    risk_radius: int = 50,
-    weight_security: float = 0.7,
-) -> nx.MultiDiGraph:
-    center = (
-        (origin[0] + destination[0]) / 2,
-        (origin[1] + destination[1]) / 2,
-    )
-    graph = ox.graph_from_point(center, dist=radius_m, network_type="drive")
-
-    for u, v, k, data in graph.edges(keys=True, data=True):
-        try:
-            u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
-            v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
-            midpoint = ((u_lat + v_lat) / 2, (u_lon + v_lon) / 2)
-
-            # Distance
-            length = geodesic((u_lat, u_lon), (v_lat, v_lon)).meters
-            data["length"] = length
-
-            # Risk
-            point = Point(midpoint[1], midpoint[0], srid=4326)
-            incidents = Incident.objects.filter(
-                location__distance_lte=(point, D(m=risk_radius))
-            )
-            if incidents:
-                avg_severity = sum(i.severity for i in incidents) / len(
-                    incidents
-                )
-                days_since = [
-                    (now().date() - i.incident_date).days for i in incidents
-                ]
-                avg_time = sum(days_since) / len(days_since)
-                data["risk"] = calculate_fuzzy_danger(
-                    len(incidents), avg_severity, risk_radius, avg_time
-                )
-            else:
-                data["risk"] = 0.0
-
-            # Combined cost
-            speed = 50 / 3.6  # m/s
-            time = length / speed
-            weight_speed = 1 - weight_security
-            data["combined_cost"] = (data["risk"] * weight_security) + (
-                time * weight_speed
-            )
-
-        except Exception as e:
-            logger.warning(f"Error procesando arista {u}-{v}: {e}")
-            data["length"] = 1.0
-            data["risk"] = 0.0
-            data["combined_cost"] = 1.0
-
-    return graph
 
 
 def get_incidents_in_graph(graph: nx.MultiDiGraph) -> QuerySet[Incident]:
@@ -119,6 +62,7 @@ def get_incidents_in_graph(graph: nx.MultiDiGraph) -> QuerySet[Incident]:
     lats = [n[1]["y"] for n in nodes]
     lons = [n[1]["x"] for n in nodes]
     bbox = Polygon.from_bbox((min(lons), min(lats), max(lons), max(lats)))
+    bbox.srid = 4326  # SRID de Incident.location
     return Incident.objects.filter(location__within=bbox)
 
 
