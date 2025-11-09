@@ -15,6 +15,8 @@ def serialize_incidents(incidents=None, json_dump=True):
     )
     incidents_data = [
         {
+            "id": i.id,
+            "geometry": i.location.geojson,
             "lat": i.latitude,
             "lon": i.longitude,
             "severity": i.severity,

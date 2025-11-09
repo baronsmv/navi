@@ -172,6 +172,9 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
                 "route": route_coords,
                 "dangerLevel": danger_level,
                 "geojson": geojson,
+                "incidents": serialize_incidents(incidents, json_dump=False)[
+                    "incidents_json"
+                ],
             }
         )
 
