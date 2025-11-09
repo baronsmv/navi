@@ -10,9 +10,12 @@ from core.logic.route_danger import calculate_best_route_cost
 logger = logging.getLogger(__name__)
 
 
-def parse_coordinates(post_data: Dict[str, str]) -> Tuple[float, float, float, float]:
+def parse_coordinates(
+    post_data: Dict[str, str],
+) -> Tuple[float, float, float, float]:
     """
-    Extrae y convierte las coordenadas de origen y destino desde un diccionario de datos POST.
+    Extrae y convierte las coordenadas de origen y destino desde un
+    diccionario de datos POST.
 
     Args:
         post_data: Diccionario con claves de origen y destino.
@@ -21,7 +24,8 @@ def parse_coordinates(post_data: Dict[str, str]) -> Tuple[float, float, float, f
         Coordenadas (latitud y longitud) de origen y destino.
 
     Raises:
-        ValueError: Si faltan claves o los valores no son convertibles a float.
+        ValueError: Si faltan claves o los valores no son convertibles a
+            float.
     """
     try:
         origin_lat = float(post_data["origin_lat"])
@@ -37,31 +41,37 @@ def get_graph(
     origin: Tuple[float, float], destination: Tuple[float, float]
 ) -> nx.MultiDiGraph:
     """
-    Genera un grafo de calles desde OpenStreetMap centrado entre dos puntos y añade distancias a las aristas.
+    Genera un grafo de calles desde OpenStreetMap centrado entre dos puntos
+    y añade distancias a las aristas.
 
     Args:
         origin: Coordenadas del punto de origen (latitud, longitud).
         destination: Coordenadas del punto de destino (latitud, longitud).
 
     Returns:
-        Grafo generado de OpenStreetMap con el atributo 'length' agregado a las aristas.
+        Grafo generado de OpenStreetMap con el atributo 'length' agregado a
+            las aristas.
 
     Notes:
-        - La función calcula el centro geográfico entre el origen y el destino y obtiene el grafo
-          de OpenStreetMap en un radio de hasta 70 km, dependiendo de la distancia entre ambos puntos.
-        - Después de obtener el grafo, se añade el atributo 'length' a las aristas para permitir
-          el cálculo de distancias y costos de las rutas.
+        - La función calcula el centro geográfico entre el origen y el destino
+          y obtiene el grafo de OpenStreetMap en un radio de hasta 70 km,
+          dependiendo de la distancia entre ambos puntos.
+        - Después de obtener el grafo, se añade el atributo 'length' a las
+          aristas para permitir el cálculo de distancias y costos de las rutas.
     """
     # Calcular la distancia en kilómetros entre origen y destino
     distance_km = geodesic(origin, destination).km
     # Limitar el radio a 5 km como máximo
     radius_m = min(distance_km, 5) * 1000  # Convertir a metros
-    # Calcular las coordenadas medias (centro geográfico) entre origen y destino
+    # Calcular las coordenadas medias (centro geográfico) entre origen y
+    # destino
     mid_lat = (origin[0] + destination[0]) / 2
     mid_lon = (origin[1] + destination[1]) / 2
 
     # Obtener el grafo de OpenStreetMap en un radio determinado desde el centro
-    graph = ox.graph_from_point((mid_lat, mid_lon), dist=radius_m, network_type="all")
+    graph = ox.graph_from_point(
+        (mid_lat, mid_lon), dist=radius_m, network_type="all"
+    )
 
     # Calcular y agregar el atributo 'length' a las aristas
     for u, v, k, data in graph.edges(keys=True, data=True):
@@ -95,7 +105,8 @@ def get_route(
     weight_security: float = 0.5,
 ) -> Tuple[List[int], int, int]:
     """
-    Encuentra la mejor ruta entre dos coordenadas usando un grafo con costos combinados.
+    Encuentra la mejor ruta entre dos coordenadas usando un grafo con costos
+    combinados.
 
     Args:
         graph: Grafo base con nodos y coordenadas.
@@ -109,9 +120,12 @@ def get_route(
     """
     # Obtener los nodos más cercanos a las coordenadas de origen y destino
     origin_node = ox.distance.nearest_nodes(graph, origin[1], origin[0])
-    dest_node = ox.distance.nearest_nodes(graph, destination[1], destination[0])
+    dest_node = ox.distance.nearest_nodes(
+        graph, destination[1], destination[0]
+    )
 
-    # Calcular la mejor ruta entre los nodos de origen y destino, usando el grafo con costos
+    # Calcular la mejor ruta entre los nodos de origen y destino,
+    # usando el grafo con costos
     best_route, _ = calculate_best_route_cost(
         graph_with_cost,
         origin_node,
@@ -121,7 +135,9 @@ def get_route(
     )
 
     if not best_route:
-        logger.warning("No se encontró una ruta óptima, devolviendo ruta vacía.")
+        logger.warning(
+            "No se encontró una ruta óptima, devolviendo ruta vacía."
+        )
         return [], origin_node, dest_node
 
     return best_route, origin_node, dest_node

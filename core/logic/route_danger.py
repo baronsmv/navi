@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def node_incidents(
-    node_lat: float, node_lon: float, radius: int = config["risk_calculation"]["radius"]
+    node_lat: float,
+    node_lon: float,
+    radius: int = config["risk_calculation"]["radius"],
 ) -> Tuple[Incident, ...]:
     """
     Busca incidentes cercanos a un nodo geográfico dentro de un radio dado.
@@ -32,7 +34,10 @@ def node_incidents(
     """
     node_point = Point(node_lon, node_lat, srid=4326)  # Crear punto geográfico
     incidents = Incident.objects.filter(
-        location__distance_lte=(node_point, D(m=radius))  # Buscar incidentes cercanos
+        location__distance_lte=(
+            node_point,
+            D(m=radius),
+        )  # Buscar incidentes cercanos
     )
     return tuple(incidents)
 
@@ -119,10 +124,14 @@ def weighted_average(values: Tuple[float, ...]) -> float:
     Returns:
         Promedio ponderado.
     """
-    return float(average(values, weights=tuple(1 / d if d != 0 else 1 for d in values)))
+    return float(
+        average(values, weights=tuple(1 / d if d != 0 else 1 for d in values))
+    )
 
 
-def route_risk(incidents: Set[Incident], graph: nx.MultiDiGraph, route: list) -> float:
+def route_risk(
+    incidents: Set[Incident], graph: nx.MultiDiGraph, route: list
+) -> float:
     """
     Calcula el riesgo total de una ruta basado en incidentes cercanos.
 
@@ -137,17 +146,23 @@ def route_risk(incidents: Set[Incident], graph: nx.MultiDiGraph, route: list) ->
     if not incidents:
         return 0.0  # No hay incidentes, ruta segura
 
-    distances = tuple(i[2] for i in incidents_distance(incidents, route, graph))
+    distances = tuple(
+        i[2] for i in incidents_distance(incidents, route, graph)
+    )
 
     current_date = now().date()
     times = tuple((current_date - i.incident_date).days for i in incidents)
 
     num_incidents = len(incidents)
-    avg_gravity = sum([incidente.severity for incidente in incidents]) / num_incidents
+    avg_gravity = (
+        sum([incidente.severity for incidente in incidents]) / num_incidents
+    )
     risk_zone_distance = weighted_average(distances)
     time = weighted_average(times)
 
-    return calculate_fuzzy_danger(num_incidents, avg_gravity, risk_zone_distance, time)
+    return calculate_fuzzy_danger(
+        num_incidents, avg_gravity, risk_zone_distance, time
+    )
 
 
 def calculate_route_cost(
@@ -174,7 +189,9 @@ def calculate_route_cost(
 
     # Calcular el riesgo total de la ruta utilizando route_risk
     route_risk_value = route_risk(incidents, graph, route_nodes)
-    logger.info(f"Valor del riesgo de la ruta {route_nodes}: {route_risk_value}")
+    logger.info(
+        f"Valor del riesgo de la ruta {route_nodes}: {route_risk_value}"
+    )
 
     # Calcular la distancia total de la ruta
     total_distance = 0
@@ -193,26 +210,37 @@ def calculate_route_cost(
 
         total_distance += min_length  # Sumar la longitud de la arista
 
-    logger.info(f"Distancia total de la ruta {route_nodes}: {total_distance} metros")
+    logger.info(
+        f"Distancia total de la ruta {route_nodes}: {total_distance} metros"
+    )
 
     # Calcular el tiempo de viaje para la ruta (suponiendo una velocidad constante)
     speed = 50 / 3.6  # Velocidad en metros por segundo
     travel_time = total_distance / speed  # Tiempo de viaje en segundos
     logger.info(
-        f"Tiempo de viaje estimado para la ruta {route_nodes}: {travel_time} segundos"
+        f"Tiempo de viaje estimado para la ruta {route_nodes}: "
+        f"{travel_time} segundos"
     )
 
     # Calcular el costo combinado para esta ruta
-    combined_cost = (route_risk_value * weight_security) + (travel_time * weight_speed)
+    combined_cost = (route_risk_value * weight_security) + (
+        travel_time * weight_speed
+    )
     logger.info(
-        f"Costo combinado para la ruta {route_nodes}: {combined_cost} (seguridad: {route_risk_value * weight_security}, rapidez: {travel_time * weight_speed})"
+        f"Costo combinado para la ruta {route_nodes}: {combined_cost} "
+        f"(seguridad: {route_risk_value * weight_security}, "
+        f"rapidez: {travel_time * weight_speed})"
     )
 
     return combined_cost
 
 
 def calculate_best_route_cost(
-    graph: nx.MultiDiGraph, u: int, v: int, weight_security: float, weight_speed: float
+    graph: nx.MultiDiGraph,
+    u: int,
+    v: int,
+    weight_security: float,
+    weight_speed: float,
 ) -> Tuple[List, float]:
     """
     Encuentra la mejor ruta entre dos nodos según el costo combinado.

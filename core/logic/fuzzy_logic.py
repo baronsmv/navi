@@ -46,7 +46,9 @@ def build_fuzzy_system() -> ctrl.ControlSystem:
     # Universos de valores
     incidents_universe = arange(0, 51, 1)  # Número de incidentes cercanos
     gravity_universe = arange(1, 5.1, 0.1)  # Gravedad de los incidentes (1-5)
-    risk_zone_universe = arange(0, 101, 1)  # Distancia a zona de riesgo (0-100 metros)
+    risk_zone_universe = arange(
+        0, 101, 1
+    )  # Distancia a zona de riesgo (0-100 metros)
     time_universe = arange(0, 61, 1)  # Días desde el incidente (0-60 días)
     danger_universe = arange(0, 1.01, 0.01)  # Índice de peligrosidad (0-1)
 

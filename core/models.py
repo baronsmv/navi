@@ -35,7 +35,7 @@ class Incident(models.Model):
         geography=True, srid=4326, default=Point(0.0, 0.0), spatial_index=True
     )
 
-    severity = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])  # 1 to 5
+    severity = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])
 
     status = models.CharField(
         max_length=20, choices=INCIDENT_STATUS, default="unresolved"

@@ -56,7 +56,9 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     try:
-        origin_lat, origin_lon, dest_lat, dest_lon = parse_coordinates(request.POST)
+        origin_lat, origin_lon, dest_lat, dest_lon = parse_coordinates(
+            request.POST
+        )
         origin = (origin_lat, origin_lon)
         destination = (dest_lat, dest_lon)
 
@@ -68,11 +70,14 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
         if graph.number_of_nodes() == 0 or graph.number_of_edges() == 0:
             logger.error("El grafo generado está vacío.")
             return JsonResponse(
-                {"error": "No se pudo generar el grafo de navegación."}, status=500
+                {"error": "No se pudo generar el grafo de navegación."},
+                status=500,
             )
 
         # Obtener la mejor ruta
-        route, origin_node, dest_node = get_route(graph, graph, origin, destination)
+        route, origin_node, dest_node = get_route(
+            graph, graph, origin, destination
+        )
 
         if not route:
             logger.warning("No se encontró una ruta óptima.")
@@ -101,7 +106,9 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
-                "incidents": serialize.incidents(incidents, False)["incidents_json"],
+                "incidents": serialize.incidents(incidents, False)[
+                    "incidents_json"
+                ],
             }
         )
 
@@ -111,4 +118,6 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
 
     except Exception as e:
         logger.error(f"Ocurrió un error inesperado: {e}", exc_info=True)
-        return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)
+        return JsonResponse(
+            {"error": f"Error inesperado: {str(e)}"}, status=500
+        )
