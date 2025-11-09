@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ ! -f .env ] && [ -f .env.copy ]; then
+    echo "[START] Copiando archivo de entorno por defecto..."
+    cp .env.copy .env
+fi
+
 echo "[START] Precargando grafos..."
 python scripts/prebuild_graphs.py
 

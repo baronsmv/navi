@@ -15,6 +15,7 @@ build/
 # Archivos de configuración y credenciales
 *.env
 .env*
+!.env.copy
 *.secrets.json
 
 # Django
