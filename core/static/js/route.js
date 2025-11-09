@@ -80,6 +80,7 @@ function calculateRoute(map, state, dangerTextEl) {
             }
 
             // Verifica el valor de 'dangerLevel' que llega en la respuesta
+            console.log("Primeros puntos de la ruta:", data.route.slice(0, 5));
             console.log('Nivel de peligrosidad:', data.dangerLevel);
             console.log('Incidentes:', data.incidents);
 
@@ -92,9 +93,11 @@ function calculateRoute(map, state, dangerTextEl) {
             console.log('Color de la ruta:', routeColor); // Verifica el color calculado
 
             // Crear la nueva línea de ruta con el color correspondiente
-            state.routeLine = L.polyline(data.route, {
-                color: routeColor,  // Asignamos el color basado en el nivel de peligro
-                weight: 6
+            state.routeLine = L.geoJSON(data.geojson, {
+                style: {
+                    color: routeColor,  // Asignamos el color basado en el nivel de peligro
+                    weight: 6
+                }
             }).addTo(map);
 
             // Ajustamos el mapa a la nueva ruta
