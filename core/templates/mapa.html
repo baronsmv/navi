@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ruta Segura</title>
+    <title>Navegación Segura</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     {% load static %}
 
@@ -13,10 +13,10 @@
     <link href="{% static 'css/map.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body>
 
+<body>
 <div id="panel">
-    <h2>Ruta Segura</h2>
+    <h2>Navegación Segura</h2>
     <p>Haz clic en el mapa para seleccionar el origen y luego el destino.</p>
     <div id="danger">Nivel de peligrosidad: --</div>
     <div class="slider-group">
@@ -25,19 +25,23 @@
         <span id="securityValue">Moderado</span>
     </div>
     <div class="nav-actions">
-        <a class="nav-button" id="resetBtn" title="Reiniciar">
-            <img alt="Reiniciar" class="icon-btn" src="{% static 'icons/reset.svg' %}">
-        </a>
         <a href="{% url 'add_incident' %}" title="Agregar incidente">
             <img alt="Agregar" class="icon-btn" src="{% static 'icons/add.svg' %}">
         </a>
         <a href="{% url 'incident_list' %}" title="Ver incidentes">
             <img alt="Ver" class="icon-btn" src="{% static 'icons/list.svg' %}">
         </a>
-    </div>
 
+        <div class="spacer"></div>
+
+        <a class="nav-button" id="resetBtn" title="Reiniciar">
+            <img alt="Reiniciar" class="icon-btn" src="{% static 'icons/reset.svg' %}">
+        </a>
+    </div>
 </div>
 
+<div class="spinner hidden" id="loadingSpinner"></div>
+<div class="toast hidden" id="toast">Ruta calculada correctamente</div>
 <div id="map"></div>
 
 <!-- Datos de incidentes en JSON -->

@@ -43,25 +43,50 @@ function resetMap(map, state, dangerTextEl) {
     state.originCoords = null;
     state.destCoords = null;
 
+    dangerTextEl.style.backgroundColor = "#fff"
+    dangerTextEl.style.color = "#888"
     dangerTextEl.innerText = "Nivel de peligrosidad: --";
-}
-
-function updateDangerLevel(dangerTextEl, dangerLevel) {
-    dangerTextEl.innerText = `Nivel de peligrosidad: ${dangerLevel.toFixed(2)}`;
 }
 
 function getColor(severity, domain) {
     const scale = d3.scaleLinear()
         .domain(domain)  // Usa el dominio pasado como argumento
         .range(['green', 'yellow', 'orange', 'red', 'darkred']); // Color range
-
     return scale(severity);
+}
+
+function getSecurityLabel(value) {
+    const v = parseFloat(value);
+    if (v >= 0.8) return "Muy seguro";
+    if (v >= 0.6) return "Seguro";
+    if (v >= 0.4) return "Moderado";
+    if (v >= 0.2) return "Peligroso";
+    return "Muy peligroso";
+}
+
+function updateDangerLevel(el, severity) {
+    el.textContent = `Nivel de peligrosidad: ${getSecurityLabel(1 - severity)}`;
+    el.style.backgroundColor = getColor(severity, [0, 0.2, 0.4, 0.6, 0.8, 1]);
+    el.style.color = "#fff"
+}
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+        toast.classList.add("hidden");
+    }, 3000);
 }
 
 function calculateRoute(map, state, dangerTextEl) {
     const {originCoords, destCoords} = state;
     if (!originCoords || !destCoords) return;
 
+    document.getElementById("loadingSpinner").classList.remove("hidden");
     const weightSecurity = parseFloat(document.getElementById("securitySlider").value);
 
     const formData = new FormData();
@@ -77,6 +102,7 @@ function calculateRoute(map, state, dangerTextEl) {
     })
         .then(response => response.json())
         .then(data => {
+            document.getElementById("loadingSpinner").classList.add("hidden");
             if (!data.route) {
                 alert("No se pudo calcular la ruta.");
                 return;
@@ -115,8 +141,11 @@ function calculateRoute(map, state, dangerTextEl) {
             } else {
                 console.log("No hay incidentes para mostrar.");
             }
+
+            showToast("Ruta calculada correctamente")
         })
         .catch(error => {
+            document.getElementById("loadingSpinner").classList.add("hidden");
             console.error("Error al calcular ruta:", error);
         });
 }
