@@ -10,7 +10,7 @@
     <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
 
     <!-- Hoja de estilos para la página -->
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <link href="{% static 'css/map.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -19,7 +19,23 @@
     <h2>Ruta Segura</h2>
     <p>Haz clic en el mapa para seleccionar el origen y luego el destino.</p>
     <div id="danger">Nivel de peligrosidad: --</div>
-    <button id="resetBtn">Reiniciar</button>
+    <div class="slider-group">
+        <label for="securitySlider">Prioridad de seguridad:</label>
+        <input id="securitySlider" max="1" min="0" step="0.01" type="range" value="0.5">
+        <span id="securityValue">Moderado</span>
+    </div>
+    <div class="nav-actions">
+        <a class="nav-button" id="resetBtn" title="Reiniciar">
+            <img alt="Reiniciar" class="icon-btn" src="{% static 'icons/reset.svg' %}">
+        </a>
+        <a href="{% url 'add_incident' %}" title="Agregar incidente">
+            <img alt="Agregar" class="icon-btn" src="{% static 'icons/add.svg' %}">
+        </a>
+        <a href="{% url 'incident_list' %}" title="Ver incidentes">
+            <img alt="Ver" class="icon-btn" src="{% static 'icons/list.svg' %}">
+        </a>
+    </div>
+
 </div>
 
 <div id="map"></div>
@@ -32,10 +48,9 @@
 <script src="https://d3js.org/d3.v7.min.js"></script>
 
 <script src="{% static 'js/map_common.js' %}"></script>
-
 <script src="{% static 'js/incident.js' %}"></script>
 <script src="{% static 'js/route.js' %}"></script>
-<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/map.js' %}"></script>
 
 </body>
 </html>

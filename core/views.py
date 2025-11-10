@@ -70,8 +70,12 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
             (origin[1] + destination[1]) / 2,
         )
         radius_m = estimate_radius(origin, destination)
+        weight_security = float(request.POST.get("weight_security", 0.5))
 
-        logger.info(f"Solicitando ruta de {origin} a {destination}")
+        logger.info(
+            f"Solicitando ruta de {origin} a {destination}, "
+            f"con prioridad de seguridad de {weight_security * 100}%"
+        )
 
         # Buscar grafo que contenga ambos puntos
         graph_path = find_graph_for_route(origin, destination)
@@ -135,7 +139,7 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
 
         # Asignar riesgos y calcular ruta
         incidents = get_incidents_in_graph(subgraph)
-        assign_edge_risks(subgraph, incidents)
+        assign_edge_risks(subgraph, incidents, weight_security=weight_security)
 
         logger.info(
             f"Subgrafo: {len(subgraph.nodes)} nodos, {len(subgraph.edges)} aristas"

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 risk_calculation = config.risk.get("calculation", {})
 
-risk_radius = risk_calculation.get("risk_radius", 0.8)
+risk_radius = risk_calculation.get("radius", 100)
 weight_security = risk_calculation.get("weight_security", 0.8)
 
 
@@ -123,4 +123,4 @@ def assign_edge_risks(
             logger.warning(f"Error al procesar arista {u}-{v}: {e}")
             data["length"] = 1.0
             data["risk"] = 0.0
-            data["combined_cost"] = 1.0
+            data["combined_cost"] = float("inf")

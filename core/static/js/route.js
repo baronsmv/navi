@@ -62,11 +62,14 @@ function calculateRoute(map, state, dangerTextEl) {
     const {originCoords, destCoords} = state;
     if (!originCoords || !destCoords) return;
 
+    const weightSecurity = parseFloat(document.getElementById("securitySlider").value);
+
     const formData = new FormData();
     formData.append('origin_lat', originCoords[0]);
     formData.append('origin_lon', originCoords[1]);
     formData.append('dest_lat', destCoords[0]);
     formData.append('dest_lon', destCoords[1]);
+    formData.append('weight_security', weightSecurity);
 
     fetch('/calculate_route/', {
         method: 'POST',
