@@ -1,18 +1,12 @@
 from pathlib import Path
 from typing import Optional
 
-import environ
 import networkx as nx
 import osmnx as ox
 from django.contrib.gis.geos import Point, Polygon
 from osmnx.truncate import truncate_graph_dist
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-env.read_env(BASE_DIR / ".env")
-
-PREBUILT_DIR = BASE_DIR / "cache" / "graphs" / "prebuilt"
-DYNAMIC_DIR = BASE_DIR / "cache" / "graphs" / "dynamic"
+from .config import cache_locations, PREBUILT_GRAPH_DIR, DYNAMIC_GRAPH_DIR
 
 ox.settings.overpass_endpoint = "https://overpass.kumi.systems/api"
 
@@ -37,14 +31,14 @@ def graph_contains(
 def find_graph_for_route(
     origin: tuple[float, float], destination: tuple[float, float]
 ) -> Optional[Path]:
-    for name in env.list("GRAPH_LOCATIONS"):
-        path = PREBUILT_DIR / f"{name}.graphml"
+    for name in cache_locations.keys():
+        path = PREBUILT_GRAPH_DIR / f"{name}.graphml"
         if path.exists():
             graph = ox.load_graphml(path)
             if graph_contains(graph, origin, destination):
                 return path
 
-    for path in DYNAMIC_DIR.glob("*.graphml"):
+    for path in DYNAMIC_GRAPH_DIR.glob("*.graphml"):
         graph = ox.load_graphml(path)
         if graph_contains(graph, origin, destination):
             return path
@@ -67,7 +61,6 @@ def save_dynamic_graph(center: tuple[float, float], radius_m: float) -> Path:
     filename = (
         f"{round(center[0], 4)}_{round(center[1], 4)}_{radius_m}.graphml"
     )
-    path = DYNAMIC_DIR / filename
-    DYNAMIC_DIR.mkdir(parents=True, exist_ok=True)
+    path = DYNAMIC_GRAPH_DIR / filename
     ox.save_graphml(graph, path)
     return path

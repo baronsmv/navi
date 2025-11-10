@@ -10,7 +10,7 @@ from django.http import JsonResponse, HttpRequest
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 
-from scripts.graph_loader import (
+from utils.graph_loader import (
     save_dynamic_graph,
     find_graph_for_route,
     get_local_subgraph,
@@ -112,7 +112,7 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
                 or dest_node not in subgraph.nodes
             ):
                 logger.warning(
-                    "⚠️ Subgrafo no contiene ambos nodos. Usando grafo completo."
+                    "Subgrafo no contiene ambos nodos. Usando grafo completo."
                 )
                 subgraph = graph
                 origin_node = ox.distance.nearest_nodes(
@@ -123,7 +123,7 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
                 )
         except Exception as e:
             logger.warning(
-                f"⚠️ Error al recortar grafo: {e}. Usando grafo completo."
+                f"Error al recortar grafo: {e}. Usando grafo completo."
             )
             subgraph = graph
             origin_node = ox.distance.nearest_nodes(
@@ -143,7 +143,7 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
         logger.info(f"Nodo origen: {origin_node}, destino: {dest_node}")
 
         try:
-            route = nx.dijkstra_path(
+            route = nx.astar_path(
                 subgraph, origin_node, dest_node, weight="combined_cost"
             )
         except nx.NetworkXNoPath:
@@ -165,13 +165,12 @@ def calculate_route(request: HttpRequest) -> JsonResponse:
             for k in subgraph[u][v]
         ]
         danger_level = max(risks) if risks else 0.0
-        geojson = build_geojson(route_coords, danger_level)
 
         return JsonResponse(
             {
                 "route": route_coords,
                 "dangerLevel": danger_level,
-                "geojson": geojson,
+                "geojson": build_geojson(route_coords, danger_level),
                 "incidents": serialize_incidents(incidents, json_dump=False)[
                     "incidents_json"
                 ],

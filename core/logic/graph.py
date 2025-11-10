@@ -8,10 +8,16 @@ from django.db.models import QuerySet
 from django.utils.timezone import now
 from geopy.distance import geodesic
 
+from utils import config
 from .fuzzy import calculate_fuzzy_danger
 from ..models import Incident
 
 logger = logging.getLogger(__name__)
+
+risk_calculation = config.risk.get("calculation", {})
+
+risk_radius = risk_calculation.get("risk_radius", 0.8)
+weight_security = risk_calculation.get("weight_security", 0.8)
 
 
 def estimate_radius(
@@ -69,8 +75,8 @@ def get_incidents_in_graph(graph: nx.MultiDiGraph) -> QuerySet[Incident]:
 def assign_edge_risks(
     graph: nx.MultiDiGraph,
     incidents: QuerySet[Incident],
-    risk_radius: int = 50,
-    weight_security: float = 0.7,
+    risk_radius: int = risk_radius,
+    weight_security: float = weight_security,
     speed_mps: float = 50 / 3.6,
 ) -> None:
     """

@@ -1,0 +1,28 @@
+# Archivo de configuración de navi
+
+risk:
+  calculation: # Cálculo de riesgo predeterminado
+    radius: 250            # Radio (en metros) para buscar incidentes alrededor del nodo
+    weight_security: 0.8   # Valor de prioridad de la seguridad (entre el 0 y el 1)
+
+incidents:
+  weights: # Pesos base para la ponderación de peligrosidad
+    asalto: 1.0
+    choque: 0.7
+    homicidio: 1.5
+    robo: 0.8
+    otro: 0.5
+
+graph_cache:
+  locations: # Por cada locación, sus coordenadas (lat, lon)
+    pachuca:
+      - 20.1011
+      - -98.7591
+    cdmx:
+      - 19.4326
+      - -99.1332
+    queretaro:
+      - 20.5888
+      - -100.3899
+  radius: 10000  # Radio (en metros) de margen a cada locación
+  max_age: 7     # Vigencia de cada grafo en caché
