@@ -17,7 +17,7 @@ build/
 .env*
 !.env.copy
 config.yaml
-!config.yaml.copy
+!default_config.yaml
 *.secrets.json
 
 # Django
