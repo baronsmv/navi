@@ -7,8 +7,7 @@ function initTileLayer(map) {
 
 function getColor(severity, domain) {
     const scale = d3.scaleLinear()
-        .domain(domain)  // Usa el dominio pasado como argumento
-        .range(['green', 'yellow', 'orange', 'red', 'darkred']); // Color range
-
+        .domain(domain)
+        .range(['green', 'yellowgreen', 'yellow', 'orange', 'red', 'darkred']);
     return scale(severity);
 }

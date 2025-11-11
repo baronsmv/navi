@@ -48,24 +48,26 @@ function resetMap(map, state, dangerTextEl) {
     dangerTextEl.innerText = "Nivel de peligrosidad: --";
 }
 
-function getColor(severity, domain) {
-    const scale = d3.scaleLinear()
-        .domain(domain)  // Usa el dominio pasado como argumento
-        .range(['green', 'yellow', 'orange', 'red', 'darkred']); // Color range
-    return scale(severity);
-}
-
 function getSecurityLabel(value) {
     const v = parseFloat(value);
-    if (v >= 0.8) return "Muy seguro";
+    if (v >= 0.8) return "Muy seguro, pero lento";
     if (v >= 0.6) return "Seguro";
+    if (v >= 0.4) return "Equilibrado";
+    if (v >= 0.2) return "Rápido";
+    return "Muy rápido, pero inseguro";
+}
+
+function getDangerLabel(value) {
+    const v = parseFloat(value);
+    if (v >= 0.8) return "Muy inseguro";
+    if (v >= 0.6) return "Inseguro";
     if (v >= 0.4) return "Moderado";
-    if (v >= 0.2) return "Peligroso";
-    return "Muy peligroso";
+    if (v >= 0.2) return "Seguro";
+    return "Muy seguro";
 }
 
 function updateDangerLevel(el, severity) {
-    el.textContent = `Nivel de peligrosidad: ${getSecurityLabel(1 - severity)}`;
+    el.textContent = `Nivel de peligrosidad: ${getDangerLabel(severity)}`;
     el.style.backgroundColor = getColor(severity, [0, 0.2, 0.4, 0.6, 0.8, 1]);
     el.style.color = "#fff"
 }
